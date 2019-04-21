@@ -18,7 +18,7 @@ def distance(origin, destination):
     return dist
 
 def reading():
-    with open('zz.txt', 'r') as f:
+    with open('HartaTraseu.txt', 'r') as f:
         s = f.read()
         whip = ast.literal_eval(s)
     return s
