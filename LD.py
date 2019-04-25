@@ -74,11 +74,11 @@ class Structuri:
         self.pozitieMijloc=0
         self.pozitieFinala=0
 
-    def ObtineStructuri(self,lungimeCadruAnalizat):
+    def ObtineStructuri(self,lungimeCadruAnalizat,inaltimeCadru):
         global binarization,LatimeCadru
         for j in range(1, lungimeCadruAnalizat):
             if self.interesant == True:
-                if binarization[int(LatimeCadru * 4.0 / 5), j] == 0:
+                if binarization[inaltimeCadru, j] == 0:
                     self.interesant = False
                     if (1 < self.EroareCentruTemporar < self.EroareCentru):
                         print("Structuri false. - Nu salvam valoarea")  # de fapt ar trebui sa recalculam centrul nou
@@ -150,17 +150,14 @@ while (cap.isOpened()):
     array = np.argwhere(binarization[int(LatimeCadru * 2.0 / 3), :] > 1)
     interesant = False
     pozitieInteresanta = 0
-    interesant2 = False
-    pozitieInteresanta2 = 0
+    StructuraPrincipala = Structuri()
     StructuraSecundara = Structuri()
     structuri = 0
     structuri2 = 0
     centre = np.zeros(0)
-    centre2 = np.zeros(0)
     EroareCentru = 50
     EroareCentruTemporar = 0
     EroareCentru2 = 50
-    EroareCentruTemporar2 = 0
     for i in range(1, lungimeCadru):
         if interesant == True:  # ce facem cand e structura extinsa
             if binarization[int(LatimeCadru * 2.0 / 3), i] == 0:
@@ -188,20 +185,16 @@ while (cap.isOpened()):
             interesant = True
             pozitieInteresanta = i
             # *************************************************
-    StructuraSecundara.ObtineStructuri(lungimeCadru)
-    interesant2=StructuraSecundara.interesant
-    EroareCentruTemporar2 = StructuraSecundara.EroareCentruTemporar
-    structuri = StructuraSecundara.NumarStructuri
-    centre2 = StructuraSecundara.centre
-    pozitieInteresanta2 = StructuraSecundara.pozitieInteresanta
-     # EroareCentruTemporar2, structuri2, centre2, pozitieInteresanta2
+    StructuraPrincipala.ObtineStructuri(lungimeCadru, int(LatimeCadru * 2.0 / 3))
+    #TODO: interesant,centre,structuri de schimbat cu StructuraPrincipala
+    StructuraSecundara.ObtineStructuri(lungimeCadru,int(LatimeCadru * 4.0 / 5))
 
     # ****************************************
 
 
     print("Benzi gasite:" + str(structuri))
     print("\nCentre:\t" + str(centre))
-    print("\nCentre2:\t" + str(centre2))
+    print("\nCentre2:\t" + str(StructuraSecundara.centre))
     MijlocCamera = int(lungimeCadru / 2.0)
     EroareCentrare = 20
     if centre.size == 2:
@@ -245,7 +238,7 @@ while (cap.isOpened()):
             # print(int(centru))
             cv2.putText(img, str(centru), (int(centru - 20), int(LatimeCadru * 2.0 / 3)), cv2.FONT_HERSHEY_SIMPLEX, 1,
                         (0, 0, 0), 2)
-        for centru2 in centre2:
+        for centru2 in StructuraSecundara.centre:
             cv2.putText(img, str(centru2), (int(centru2 - 20), int(LatimeCadru * 4.0 / 5)), cv2.FONT_HERSHEY_SIMPLEX, 1,
                         (0, 0, 0), 2)
     if mijlocCalculat is  None:
@@ -269,19 +262,19 @@ while (cap.isOpened()):
             # print(int(centru))
             cv2.putText(img, str(centru), (int(centru - 20), int(LatimeCadru * 2.0 / 3)), cv2.FONT_HERSHEY_SIMPLEX, 1,
                         (0, 0, 255), 2)
-    if centre2.size == 1:
-        for centru2 in centre2:
+    if StructuraSecundara.centre.size == 1:
+        for centru2 in StructuraSecundara.centre:
             cv2.putText(img, str(centru2), (int(centru2 - 20), int(LatimeCadru * 4.0 / 5)), cv2.FONT_HERSHEY_SIMPLEX, 1,
                         (0, 0, 255), 2)
 
-    if centre.size == 2 and centre2.size == 2:
-        alphaAnglesLeft = math.atan(((LatimeCadru * 4.0 / 5) - (LatimeCadru * 2.0 /3 ))/(centre[0] - centre2[0]))
-        alphaAnglesRight = math.atan(((LatimeCadru * 4.0 / 5) - (LatimeCadru * 2.0 / 3)) / (centre[1] - centre2[1]))
+    if centre.size == 2 and StructuraSecundara.centre.size == 2:
+        alphaAnglesLeft = math.atan(((LatimeCadru * 4.0 / 5) - (LatimeCadru * 2.0 /3 ))/(centre[0] - StructuraSecundara.centre[0]))
+        alphaAnglesRight = math.atan(((LatimeCadru * 4.0 / 5) - (LatimeCadru * 2.0 / 3)) / (centre[1] - StructuraSecundara.centre[1]))
         alphaAnglesLeft = abs(np.rad2deg(alphaAnglesLeft))
         alphaAnglesRight = abs(np.rad2deg(alphaAnglesRight))
 
-        panta1 = (((LatimeCadru * 4.0 / 5) - (LatimeCadru * 2.0 /3 ))/(centre[0] - centre2[0]))
-        panta2 = (((LatimeCadru * 4.0 / 5) - (LatimeCadru * 2.0 / 3)) / (centre[1] - centre2[1]))
+        panta1 = (((LatimeCadru * 4.0 / 5) - (LatimeCadru * 2.0 /3 ))/(centre[0] - StructuraSecundara.centre[0]))
+        panta2 = (((LatimeCadru * 4.0 / 5) - (LatimeCadru * 2.0 / 3)) / (centre[1] - StructuraSecundara.centre[1]))
 
         unghiViraj = math.atan(panta1-panta2 / 1 + panta1*panta2)
         unghiViraj = abs(np.rad2deg(unghiViraj) - 45)
@@ -295,8 +288,8 @@ while (cap.isOpened()):
         print("PE STANGA, UNGHIUL ESTE " + str(alphaAnglesLeft))
         print("PE DREAPTA UNGHIUL ESTE " + str(alphaAnglesRight))
     
-        if centre2.size == 2 and centre.size == 2:
-            cv2.rectangle(img, (int(centre2[0] - 20 ), int(lungimeCadru * 2.0 /3)), (int(centre2[1] + 20 ), int(lungimeCadru * 2.0 / 3)), (0, 0, 255), 5, lineType = 8)
+        if StructuraSecundara.centre.size == 2 and centre.size == 2:
+            cv2.rectangle(img, (int(StructuraSecundara.centre[0] - 20 ), int(lungimeCadru * 2.0 /3)), (int(StructuraSecundara.centre[1] + 20 ), int(lungimeCadru * 2.0 / 3)), (0, 0, 255), 5, lineType = 8)
             
     try:
         DiferentaFataDeMijloc=MijlocCamera - mijlocCalculat
