@@ -15,6 +15,7 @@ import time
 import cv2
 import numpy as np
 import math
+
 #from calibration_main import get_camera_calibration
 ESTE_PE_MASINA=False
 #DISTANTABANDACT = 400 # De ce e 400?
@@ -61,6 +62,78 @@ global serialHandler
 if ESTE_PE_MASINA:
     serialHandler = SerialHandler.SerialHandler("/dev/ttyACM0")
     serialHandler.startReadThread()
+
+class Structuri:
+    def __init__(self):
+        self.interesant = False
+        self.pozitieInteresanta = 0
+        self.NumarStructuri = 0
+        self.centre = np.zeros(0)
+        self.EroareCentru = 50
+        self.EroareCentruTemporar = 0
+        self.pozitieMijloc=0
+        self.pozitieFinala=0
+
+    def ObtineStructuri(self,lungimeCadruAnalizat):
+        global binarization,LatimeCadru
+        for j in range(1, lungimeCadruAnalizat):
+            if self.interesant == True:
+                if binarization[int(LatimeCadru * 4.0 / 5), j] == 0:
+                    self.interesant = False
+                    if (1 < self.EroareCentruTemporar < self.EroareCentru):
+                        print("Structuri false. - Nu salvam valoarea")  # de fapt ar trebui sa recalculam centrul nou
+                        continue
+                    self.EroareCentruTemporar = 1
+                    self.pozitieFinala = j
+                    self.NumarStructuri= self.NumarStructuri + 1
+                    self.pozitieMijloc = int((self.pozitieInteresanta + self.pozitieFinala) / 2)
+                    self.centre = np.append(self.centre, self.pozitieMijloc)
+                    self.pozitieInteresanta = 0
+
+                elif (j == lungimeCadruAnalizat - 1):
+                    self.NumarStructuri = self.NumarStructuri + 1
+                    self.pozitieMijloc = int((self.pozitieInteresanta + j) / 2)
+                    self.centre = np.append(self.centre, self.pozitieMijloc)
+            else:
+                if (self.EroareCentruTemporar > 0) and self.EroareCentruTemporar < self.EroareCentru:
+                    self.EroareCentruTemporar = self.EroareCentruTemporar + 1
+                if (self.EroareCentruTemporar == self.EroareCentru):
+                    self.EroareCentruTemporar = 0
+            if binarization[int(LatimeCadru * 4.0 / 5), j] > 1 and self.interesant == False:
+                    self.interesant = True
+                    self.pozitieInteresanta = j
+
+def ObtineStructuri(lungimeCadruAnalizat):
+    global interesant2, EroareCentruTemporar2, structuri2, centre2, pozitieInteresanta2
+    for j in range(1, lungimeCadruAnalizat):
+        if interesant2 == True:
+            if binarization[int(LatimeCadru * 4.0 / 5), j] == 0:
+                interesant2 = False
+                if (1 < EroareCentruTemporar2 < EroareCentru2):
+                    print("Structuri false. - Nu salvam valoarea")  # de fapt ar trebui sa recalculam centrul nou
+                    continue
+                EroareCentruTemporar2 = 1
+                pozitieFinala2 = j
+                structuri2 = structuri2 + 1
+                pozitieMijloc2 = int((pozitieInteresanta2 + pozitieFinala2) / 2)
+                centre2 = np.append(centre2, pozitieMijloc2)
+                # np.insert(centre,pozitieMijloc,centre.size())
+                pozitieInteresanta2 = 0
+
+            elif (j == lungimeCadruAnalizat - 1):
+                structuri2 = structuri2 + 1
+                pozitieMijloc2 = int((pozitieInteresanta2 + j) / 2)
+                centre2 = np.append(centre2, pozitieMijloc2)
+        else:
+            if (EroareCentruTemporar2 > 0) and EroareCentruTemporar2 < EroareCentru2:
+                EroareCentruTemporar2 = EroareCentruTemporar2 + 1
+            if (EroareCentruTemporar2 == EroareCentru2):
+                EroareCentruTemporar2 = 0
+        if binarization[int(LatimeCadru * 4.0 / 5), j] > 1 and interesant2 == False:
+            interesant2 = True
+            pozitieInteresanta2 = j
+
+
 while (cap.isOpened()):
     ret, frame = cap.read()
     if ret == False:
@@ -109,6 +182,7 @@ while (cap.isOpened()):
     pozitieInteresanta = 0
     interesant2 = False
     pozitieInteresanta2 = 0
+    StructuraSecundara = Structuri()
     structuri = 0
     structuri2 = 0
     centre = np.zeros(0)
@@ -122,7 +196,7 @@ while (cap.isOpened()):
             if binarization[int(LatimeCadru * 2.0 / 3), i] == 0:
                 interesant = False
                 if (1 < EroareCentruTemporar < EroareCentru):
-                    print("Structuri fals. - Nu salvam valoarea")  # de fapt ar trebui sa recalculam centrul nou
+                    print("Structuri false. - Nu salvam valoarea")  # de fapt ar trebui sa recalculam centrul nou
                     continue
                 EroareCentruTemporar = 1
                 pozitieFinala = i
@@ -144,33 +218,14 @@ while (cap.isOpened()):
             interesant = True
             pozitieInteresanta = i
             # *************************************************
-    for j in range(1, lungimeCadru):
-        if interesant2 == True:
-            if binarization[int(LatimeCadru*4.0/5), j] == 0:
-                interesant2 = False
-                if (1 < EroareCentruTemporar2 < EroareCentru2):
-                    print("Structuri fals. - Nu salvam valoarea")  # de fapt ar trebui sa recalculam centrul nou
-                    continue
-                EroareCentruTemporar2 = 1
-                pozitieFinala2 = j
-                structuri2 = structuri2 + 1
-                pozitieMijloc2 = int((pozitieInteresanta2 + pozitieFinala2) / 2)
-                centre2 = np.append(centre2, pozitieMijloc2)
-                    # np.insert(centre,pozitieMijloc,centre.size())
-                pozitieInteresanta2 = 0
+    StructuraSecundara.ObtineStructuri(lungimeCadru)
+    interesant2=StructuraSecundara.interesant
+    EroareCentruTemporar2 = StructuraSecundara.EroareCentruTemporar
+    structuri = StructuraSecundara.NumarStructuri
+    centre2 = StructuraSecundara.centre
+    pozitieInteresanta2 = StructuraSecundara.pozitieInteresanta
+     # EroareCentruTemporar2, structuri2, centre2, pozitieInteresanta2
 
-            elif (j == lungimeCadru - 1):
-                structuri2 = structuri2 + 1
-                pozitieMijloc2 = int((pozitieInteresanta2 + j) / 2)
-                centre2 = np.append(centre2, pozitieMijloc2)
-        else:
-            if (EroareCentruTemporar2 > 0) and EroareCentruTemporar2 < EroareCentru2:
-                EroareCentruTemporar2 = EroareCentruTemporar2 + 1
-            if (EroareCentruTemporar2 == EroareCentru2):
-                EroareCentruTemporar2 = 0
-        if binarization[int(LatimeCadru * 4.0 / 5), j] > 1 and interesant2 == False:
-                interesant2 = True
-                pozitieInteresanta2 = j
     # ****************************************
 
 
@@ -225,18 +280,16 @@ while (cap.isOpened()):
                         (0, 0, 0), 2)
     if mijlocCalculat is  None:
         continue
-    if centre.size > 1:
-        cv2.line(img, (int(mijlocCalculat), 0), (int(mijlocCalculat), LatimeCadru), (255, 125, 125), 5)
 
     if centre.size == 1: #cazul in care nu ai 2 benzi
         #if centre[0] is not None and DistanteBenzi.__len__() > 10:
-        if(centre <= 320):
+        if(centre <= lungimeCadru/2):
             print("Avem o banda pe stanga")
-            CentruImaginar = centre[0] + MedDistanta
+            CentruImaginar = centre[0] + MedDistanta/2
             print("Nu exista banda pe partea dreapta, pozitia ei aproximata este " + str(CentruImaginar))
         else:
             print("Avem o banda pe dreapta")
-            CentruImaginar = centre[0] - MedDistanta
+            CentruImaginar = centre[0] - MedDistanta/2
             print("Nu exista banda pe partea stanga, pozitia ei aproximata este " + str(CentruImaginar))
 
         #if centre[0] is not None and MedDistanta > 0:
@@ -286,7 +339,6 @@ while (cap.isOpened()):
                 serialHandler.sendMove(0.0, pasAdaptare)
             print("PAS ADAPTARE: " + str(pasAdaptare))
         else:
-            print("Nu merge boss")
             if -EroareCentrare < MijlocCamera - mijlocCalculat < EroareCentrare:
                 if ESTE_PE_MASINA:
                     serialHandler.sendMove(0.0, 0.0)
@@ -294,13 +346,28 @@ while (cap.isOpened()):
             else:
                 if ESTE_PE_MASINA:
                     serialHandler.sendMove(0.0, 5.0 + pasAdaptare)
-                print("PAS ADAPTARE PE DREAPTA" + str(pasAdaptare))
+                print(">>>>>>")
+                print("PAS ADAPTARE PE DREAPTA:\t" + str(pasAdaptare))
                 pasAdaptare = pasAdaptare + 5
+                if (pasAdaptare > (23)):
+                    pasAdaptare = 22
+
             
     except Exception as e:
         print(e)
 #        print("Nu merge boss2")
         pass
+    if centre.size == 1:  # cazul in care nu ai 2 benzi
+        cv2.line(img, (int(CentruImaginar), 0), (int(CentruImaginar), LatimeCadru), (125, 125, 0), 5)
+        cv2.arrowedLine(img, (int(lungimeCadru / 2), 300), (int(CentruImaginar), 300), (255, 255, 125), 2)
+        cv2.putText(img,"Avem Mijloc Imaginar",(30,440),cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
+
+
+    if centre.size > 1:
+        cv2.arrowedLine(img, (int(lungimeCadru / 2), 300), (int(mijlocCalculat), 300), (255, 255, 125), 2)
+        cv2.putText(img, "Dist: "+str(DiferentaFataDeMijloc), (int(lungimeCadru / 2 + 50), 300), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (60, 0, 60), 1)
+        cv2.line(img, (int(mijlocCalculat), 0), (int(mijlocCalculat), LatimeCadru), (255, 125, 125), 5)
+
     # print("Dimensiune vector:"+str(array.size))
     # print("Vector analizat:"+str(array))
     # print("Valoare Medie Benzi:"+str(np.average(DistanteBenzi)))
@@ -312,6 +379,8 @@ while (cap.isOpened()):
     cv2.waitKey(1)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
+if not ESTE_PE_MASINA:
+    time.sleep(0.1)
 
 # rawCapture.truncate(0)
 if ESTE_PE_MASINA:
