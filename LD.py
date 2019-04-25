@@ -10,12 +10,13 @@ global serialHandler
 
 # todo1 - calibrare unghi atac camera si salvarea valorii medie in DistantaBanda (o constanta pe care o sa o folosim pentru a determina inclinatia fata de AX
 # todo2 - cum intra in curbe
+#todo3 - arrowedLine
 import time
 import cv2
 import numpy as np
 import math
 #from calibration_main import get_camera_calibration
-
+ESTE_PE_MASINA=False
 #DISTANTABANDACT = 400 # De ce e 400?
 DISTANTABANDACT = 350
 
@@ -57,8 +58,9 @@ CentruImaginar = 0
 mijlocCalculat=0
 pasAdaptare = 0
 global serialHandler
-serialHandler = SerialHandler.SerialHandler("/dev/ttyACM0")
-serialHandler.startReadThread()
+if ESTE_PE_MASINA:
+    serialHandler = SerialHandler.SerialHandler("/dev/ttyACM0")
+    serialHandler.startReadThread()
 while (cap.isOpened()):
     ret, frame = cap.read()
     if ret == False:
@@ -280,15 +282,18 @@ while (cap.isOpened()):
             pasAdaptare = pasAdaptare - 5
             if (pasAdaptare<(-23)):
                 pasAdaptare=-22
-            serialHandler.sendMove(0.0, pasAdaptare)
+            if ESTE_PE_MASINA:
+                serialHandler.sendMove(0.0, pasAdaptare)
             print("PAS ADAPTARE: " + str(pasAdaptare))
         else:
             print("Nu merge boss")
             if -EroareCentrare < MijlocCamera - mijlocCalculat < EroareCentrare:
-                serialHandler.sendMove(0.0, 0.0)
+                if ESTE_PE_MASINA:
+                    serialHandler.sendMove(0.0, 0.0)
                 pasAdaptare = 0
             else:
-                serialHandler.sendMove(0.0, 5.0 + pasAdaptare)
+                if ESTE_PE_MASINA:
+                    serialHandler.sendMove(0.0, 5.0 + pasAdaptare)
                 print("PAS ADAPTARE PE DREAPTA" + str(pasAdaptare))
                 pasAdaptare = pasAdaptare + 5
             
@@ -309,8 +314,10 @@ while (cap.isOpened()):
         break
 
 # rawCapture.truncate(0)
-serialHandler.sendPidActivation(False)
-serialHandler.close()
+if ESTE_PE_MASINA:
+    serialHandler.sendPidActivation(False)
+    serialHandler.close()
+
 
 # parcurgem centru si afisam cu cv2.putText(frame,"text",(coordx,coordy,cv2.FONT_fONT_HERSHEY_SIMPLEX,0.3,255)
 cap.release()
