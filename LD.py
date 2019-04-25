@@ -74,7 +74,7 @@ while (cap.isOpened()):
     #copie, Minv25 = perspective_transform(frame)
    # mtx, dist = get_camera_calibration()
     #undist_copy = cv2.undistort(copie, mtx, dist, None, mtx)
-    #cv2.imshow("PERSPECTIVA", copie)
+    #cv2.imshow("PERSPECTIVA", copie)yt
     #cv2.waitKey(0)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     #gray = abs(255 - gray)
