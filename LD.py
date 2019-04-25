@@ -103,36 +103,6 @@ class Structuri:
                     self.interesant = True
                     self.pozitieInteresanta = j
 
-def ObtineStructuri(lungimeCadruAnalizat):
-    global interesant2, EroareCentruTemporar2, structuri2, centre2, pozitieInteresanta2
-    for j in range(1, lungimeCadruAnalizat):
-        if interesant2 == True:
-            if binarization[int(LatimeCadru * 4.0 / 5), j] == 0:
-                interesant2 = False
-                if (1 < EroareCentruTemporar2 < EroareCentru2):
-                    print("Structuri false. - Nu salvam valoarea")  # de fapt ar trebui sa recalculam centrul nou
-                    continue
-                EroareCentruTemporar2 = 1
-                pozitieFinala2 = j
-                structuri2 = structuri2 + 1
-                pozitieMijloc2 = int((pozitieInteresanta2 + pozitieFinala2) / 2)
-                centre2 = np.append(centre2, pozitieMijloc2)
-                # np.insert(centre,pozitieMijloc,centre.size())
-                pozitieInteresanta2 = 0
-
-            elif (j == lungimeCadruAnalizat - 1):
-                structuri2 = structuri2 + 1
-                pozitieMijloc2 = int((pozitieInteresanta2 + j) / 2)
-                centre2 = np.append(centre2, pozitieMijloc2)
-        else:
-            if (EroareCentruTemporar2 > 0) and EroareCentruTemporar2 < EroareCentru2:
-                EroareCentruTemporar2 = EroareCentruTemporar2 + 1
-            if (EroareCentruTemporar2 == EroareCentru2):
-                EroareCentruTemporar2 = 0
-        if binarization[int(LatimeCadru * 4.0 / 5), j] > 1 and interesant2 == False:
-            interesant2 = True
-            pozitieInteresanta2 = j
-
 
 while (cap.isOpened()):
     ret, frame = cap.read()
