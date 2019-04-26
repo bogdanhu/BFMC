@@ -1,7 +1,6 @@
 import SerialHandler
 import threading
 import serial
-import time
 import sys
 import SaveEncoder
 global serialHandler
@@ -40,13 +39,6 @@ def perspective_transform(img):
     return perspective_img, Minv
 
 
-# camera = picamera.PiCamera()
-# camera.resolution = (640,480)
-# camera.framerate=32
-# rawCapture = picamera.array.PiRGBArray(camera, size=(640, 480))
-# Let camera warm up
-#time.sleep(0.1)
-
 cap = cv2.VideoCapture('demo.avi')
 #cap = cv2.VideoCapture(0)  # pentru camera
 #out = cv2.VideoWriter('camera.avi', -1, 20, (640, 480))
@@ -63,7 +55,7 @@ if ESTE_PE_MASINA:
     serialHandler = SerialHandler.SerialHandler("/dev/ttyACM0")
     serialHandler.startReadThread()
 
-class Structuri:
+class SectiuneBanda:
     def __init__(self):
         self.interesant = False
         self.pozitieInteresanta = 0
@@ -99,7 +91,7 @@ class Structuri:
                     self.EroareCentruTemporar = self.EroareCentruTemporar + 1
                 if (self.EroareCentruTemporar == self.EroareCentru):
                     self.EroareCentruTemporar = 0
-            if binarization[int(LatimeCadru * 4.0 / 5), j] > 1 and self.interesant == False:
+            if binarization[inaltimeCadru, j] > 1 and self.interesant == False:
                     self.interesant = True
                     self.pozitieInteresanta = j
 
@@ -122,19 +114,11 @@ while (cap.isOpened()):
     #cv2.imshow("PERSPECTIVA", copie)yt
     #cv2.waitKey(0)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    #gray = abs(255 - gray)
+    #gray = abs(255 - gray) # in caz ca vrem inversare
 
-    edges = cv2.Canny(gray, 75, 150)
-    lines = cv2.HoughLinesP(edges, 1, np.pi / 180, 50)
-    if lines is not None:
-        for line in lines:
-            x1, y1, x2, y2 = line[0]
 
-    # cv2.line(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+
     ret, binarization = cv2.threshold(gray, 190, 255, cv2.THRESH_BINARY)
-    binarization2, MinV = perspective_transform(binarization)
-
-    #cv2.imshow("Binarizare2", binarization2)
     # cv2.imshow("Edges", edges)
     #cv2.imshow("Image", img)
 
@@ -148,57 +132,18 @@ while (cap.isOpened()):
 
     #  print("Dimensiune imagine:" + str(binarization[160,:].size))
     array = np.argwhere(binarization[int(LatimeCadru * 2.0 / 3), :] > 1)
-    interesant = False
-    pozitieInteresanta = 0
-    StructuraPrincipala = Structuri()
-    StructuraSecundara = Structuri()
-    structuri = 0
-    structuri2 = 0
-    centre = np.zeros(0)
-    EroareCentru = 50
-    EroareCentruTemporar = 0
-    EroareCentru2 = 50
-    for i in range(1, lungimeCadru):
-        if interesant == True:  # ce facem cand e structura extinsa
-            if binarization[int(LatimeCadru * 2.0 / 3), i] == 0:
-                interesant = False
-                if (1 < EroareCentruTemporar < EroareCentru):
-                    print("Structuri false. - Nu salvam valoarea")  # de fapt ar trebui sa recalculam centrul nou
-                    continue
-                EroareCentruTemporar = 1
-                pozitieFinala = i
-                structuri = structuri + 1
-                pozitieMijloc = int((pozitieInteresanta + pozitieFinala) / 2)
-                centre = np.append(centre, pozitieMijloc)
-                # np.insert(centre,pozitieMijloc,centre.size())
-                pozitieInteresanta = 0
-            elif (i == lungimeCadru - 1):
-                structuri = structuri + 1
-                pozitieMijloc = int((pozitieInteresanta + i) / 2)
-                centre = np.append(centre, pozitieMijloc)
-        else:
-            if (EroareCentruTemporar > 0) and EroareCentruTemporar < EroareCentru:
-                EroareCentruTemporar = EroareCentruTemporar + 1
-            if (EroareCentruTemporar == EroareCentru):
-                EroareCentruTemporar = 0
-        if binarization[int(LatimeCadru * 2.0 / 3), i] > 1 and interesant == False:
-            interesant = True
-            pozitieInteresanta = i
-            # *************************************************
-    StructuraPrincipala.ObtineStructuri(lungimeCadru, int(LatimeCadru * 2.0 / 3))
-    #TODO: interesant,centre,structuri de schimbat cu StructuraPrincipala
-    StructuraSecundara.ObtineStructuri(lungimeCadru,int(LatimeCadru * 4.0 / 5))
+    SectiunePrincipala = SectiuneBanda()
+    SectiuneSecundara = SectiuneBanda()
+    SectiunePrincipala.ObtineStructuri(lungimeCadru, int(LatimeCadru * 2.0 / 3)) #66.6 % din camera
+    SectiuneSecundara.ObtineStructuri(lungimeCadru, int(LatimeCadru * 4.0 / 5)) #80 % din camera - jos
 
-    # ****************************************
-
-
-    print("Benzi gasite:" + str(structuri))
-    print("\nCentre:\t" + str(centre))
-    print("\nCentre2:\t" + str(StructuraSecundara.centre))
+    print("Benzi gasite:" + str(SectiunePrincipala.NumarStructuri))
+    print("\nCentre:\t" + str(SectiunePrincipala.centre))
+    print("\nCentre2:\t" + str(SectiuneSecundara.centre))
     MijlocCamera = int(lungimeCadru / 2.0)
     EroareCentrare = 20
-    if centre.size == 2:
-        DistantaBandaFrame = centre[1] - centre[0]
+    if SectiunePrincipala.centre.size == 2:
+        DistantaBandaFrame = SectiunePrincipala.centre[1] - SectiunePrincipala.centre[0]
         print("Distanta dintre banda dreapta si cea stanga este: " + str(DistantaBandaFrame))
         # presupunem ca in primele frameuri masina este pe linie dreapta, primele 10 valori ale distantei dintre benzi sunt stocate intr-un vector
         # dupa ce au fost gasite 10 puncte de centru, incepem sa calculam media lor, fara a mai adauga sau calcula noi centre, presupunand ca
@@ -219,10 +164,10 @@ while (cap.isOpened()):
         if (-1 <= x <= 1):
             alphaRadian = np.arccos(x)
             alphaDegrees = np.rad2deg(alphaRadian)
-            mijlocCalculat = int((centre[0] + centre[1]) / 2)
+            mijlocCalculat = int((SectiunePrincipala.centre[0] + SectiunePrincipala.centre[1]) / 2)
         else:
             print("Nu putem calcula unghiul pt " + str(x))
-            mijlocCalculat = int((centre[0] + centre[1]) / 2)
+            mijlocCalculat = int((SectiunePrincipala.centre[0] + SectiunePrincipala.centre[1]) / 2)
             DistantaFataDeAx = abs(mijlocCalculat - int(lungimeCadru / 2))
         if (MijlocCamera > (mijlocCalculat + EroareCentrare)):
             print("O luam spre stanga cu unghiul " + str(alphaDegrees))
@@ -234,47 +179,47 @@ while (cap.isOpened()):
         else:
             #f.write('0' + '\n')
             print("Suntem pe centru")
-        for centru in centre:
+        for centru in SectiunePrincipala.centre:
             # print(int(centru))
             cv2.putText(img, str(centru), (int(centru - 20), int(LatimeCadru * 2.0 / 3)), cv2.FONT_HERSHEY_SIMPLEX, 1,
                         (0, 0, 0), 2)
-        for centru2 in StructuraSecundara.centre:
+        for centru2 in SectiuneSecundara.centre:
             cv2.putText(img, str(centru2), (int(centru2 - 20), int(LatimeCadru * 4.0 / 5)), cv2.FONT_HERSHEY_SIMPLEX, 1,
                         (0, 0, 0), 2)
     if mijlocCalculat is  None:
         continue
 
-    if centre.size == 1: #cazul in care nu ai 2 benzi
+    if SectiunePrincipala.centre.size == 1: #cazul in care nu ai 2 benzi
         #if centre[0] is not None and DistanteBenzi.__len__() > 10:
-        if(centre <= lungimeCadru/2):
+        if(SectiunePrincipala.centre <= lungimeCadru/2):
             print("Avem o banda pe stanga")
-            CentruImaginar = centre[0] + MedDistanta/2
+            CentruImaginar = SectiunePrincipala.centre[0] + MedDistanta / 2
             print("Nu exista banda pe partea dreapta, pozitia ei aproximata este " + str(CentruImaginar))
         else:
             print("Avem o banda pe dreapta")
-            CentruImaginar = centre[0] - MedDistanta/2
+            CentruImaginar = SectiunePrincipala.centre[0] - MedDistanta / 2
             print("Nu exista banda pe partea stanga, pozitia ei aproximata este " + str(CentruImaginar))
 
         #if centre[0] is not None and MedDistanta > 0:
             #print("Nu exista banda pe partea stanga, pozitia ei aproximata este " + str(centre[1] - MedDistanta))
 
-        for centru in centre:
+        for centru in SectiunePrincipala.centre:
             # print(int(centru))
             cv2.putText(img, str(centru), (int(centru - 20), int(LatimeCadru * 2.0 / 3)), cv2.FONT_HERSHEY_SIMPLEX, 1,
                         (0, 0, 255), 2)
-    if StructuraSecundara.centre.size == 1:
-        for centru2 in StructuraSecundara.centre:
+    if SectiuneSecundara.centre.size == 1:
+        for centru2 in SectiuneSecundara.centre:
             cv2.putText(img, str(centru2), (int(centru2 - 20), int(LatimeCadru * 4.0 / 5)), cv2.FONT_HERSHEY_SIMPLEX, 1,
                         (0, 0, 255), 2)
 
-    if centre.size == 2 and StructuraSecundara.centre.size == 2:
-        alphaAnglesLeft = math.atan(((LatimeCadru * 4.0 / 5) - (LatimeCadru * 2.0 /3 ))/(centre[0] - StructuraSecundara.centre[0]))
-        alphaAnglesRight = math.atan(((LatimeCadru * 4.0 / 5) - (LatimeCadru * 2.0 / 3)) / (centre[1] - StructuraSecundara.centre[1]))
+    if SectiunePrincipala.centre.size == 2 and SectiuneSecundara.centre.size == 2:
+        alphaAnglesLeft = math.atan(((LatimeCadru * 4.0 / 5) - (LatimeCadru * 2.0 /3 )) / (SectiunePrincipala.centre[0] - SectiuneSecundara.centre[0]))
+        alphaAnglesRight = math.atan(((LatimeCadru * 4.0 / 5) - (LatimeCadru * 2.0 / 3)) / (SectiunePrincipala.centre[1] - SectiuneSecundara.centre[1]))
         alphaAnglesLeft = abs(np.rad2deg(alphaAnglesLeft))
         alphaAnglesRight = abs(np.rad2deg(alphaAnglesRight))
 
-        panta1 = (((LatimeCadru * 4.0 / 5) - (LatimeCadru * 2.0 /3 ))/(centre[0] - StructuraSecundara.centre[0]))
-        panta2 = (((LatimeCadru * 4.0 / 5) - (LatimeCadru * 2.0 / 3)) / (centre[1] - StructuraSecundara.centre[1]))
+        panta1 = (((LatimeCadru * 4.0 / 5) - (LatimeCadru * 2.0 /3 )) / (SectiunePrincipala.centre[0] - SectiuneSecundara.centre[0]))
+        panta2 = (((LatimeCadru * 4.0 / 5) - (LatimeCadru * 2.0 / 3)) / (SectiunePrincipala.centre[1] - SectiuneSecundara.centre[1]))
 
         unghiViraj = math.atan(panta1-panta2 / 1 + panta1*panta2)
         unghiViraj = abs(np.rad2deg(unghiViraj) - 45)
@@ -288,8 +233,8 @@ while (cap.isOpened()):
         print("PE STANGA, UNGHIUL ESTE " + str(alphaAnglesLeft))
         print("PE DREAPTA UNGHIUL ESTE " + str(alphaAnglesRight))
     
-        if StructuraSecundara.centre.size == 2 and centre.size == 2:
-            cv2.rectangle(img, (int(StructuraSecundara.centre[0] - 20 ), int(lungimeCadru * 2.0 /3)), (int(StructuraSecundara.centre[1] + 20 ), int(lungimeCadru * 2.0 / 3)), (0, 0, 255), 5, lineType = 8)
+        if SectiuneSecundara.centre.size == 2 and SectiunePrincipala.centre.size == 2:
+            cv2.rectangle(img, (int(SectiuneSecundara.centre[0] - 20), int(lungimeCadru * 2.0 / 3)), (int(SectiuneSecundara.centre[1] + 20), int(lungimeCadru * 2.0 / 3)), (0, 0, 255), 5, lineType = 8)
             
     try:
         DiferentaFataDeMijloc=MijlocCamera - mijlocCalculat
@@ -320,13 +265,13 @@ while (cap.isOpened()):
         print(e)
 #        print("Nu merge boss2")
         pass
-    if centre.size == 1:  # cazul in care nu ai 2 benzi
+    if SectiunePrincipala.centre.size == 1:  # cazul in care nu ai 2 benzi
         cv2.line(img, (int(CentruImaginar), 0), (int(CentruImaginar), LatimeCadru), (125, 125, 0), 5)
         cv2.arrowedLine(img, (int(lungimeCadru / 2), 300), (int(CentruImaginar), 300), (255, 255, 125), 2)
         cv2.putText(img,"Avem Mijloc Imaginar",(30,440),cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
 
 
-    if centre.size > 1:
+    if SectiunePrincipala.centre.size > 1:
         cv2.arrowedLine(img, (int(lungimeCadru / 2), 300), (int(mijlocCalculat), 300), (255, 255, 125), 2)
         cv2.putText(img, "Dist: "+str(DiferentaFataDeMijloc), (int(lungimeCadru / 2 + 50), 300), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (60, 0, 60), 1)
         cv2.line(img, (int(mijlocCalculat), 0), (int(mijlocCalculat), LatimeCadru), (255, 125, 125), 5)
