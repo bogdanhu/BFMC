@@ -12,12 +12,13 @@ import math
 global serialHandler
 
 DEBUG_ALL_DATA= True
-ESTE_PE_MASINA=True
+ESTE_PE_MASINA=False
 DISTANTABANDACT = 350
 
 # todo1 - calibrare unghi atac camera si salvarea valorii medie in DistantaBanda (o constanta pe care o sa o folosim pentru a determina inclinatia fata de AX
 # todo2 - cum intra in curbe
 # TODO3 - istorie cu ultimele directii ca sa eliminam false positive la mijlocCalculat
+# TODO : cum testam timpul de reactie
 # exemplu cand nu mai vede ambele benzii si curba depaseste mijlocul camerei, el marcheaza mijlocul imaginar in partea stanga
 
 def perspective_transform(img):
@@ -39,7 +40,7 @@ def perspective_transform(img):
     return perspective_img, Minv
 
 
-cap = cv2.VideoCapture('demo.avi')
+cap = cv2.VideoCapture('camera.avi')
 #cap = cv2.VideoCapture(0)  # pentru camera
 #out = cv2.VideoWriter('camera.avi', -1, 20, (640, 480))
 counter = 0
@@ -208,7 +209,7 @@ class OneLane:
             # if centre[0] is not None and DistanteBenzi.__len__() > 10:
             if SectiuneSecundara.centre.size == 1:
                 if (SectiuneSecundara.centre <= lungimeCadru / 2):
-                    self.Referinta=SectiunePrincipala.centre[0]
+                    self.Referinta=SectiuneSecundara.centre[0]
                     self.CentruImaginar =  self.Referinta + MedDistanta / 2
                     if ESTE_PE_MASINA:
                         print("Avem o banda pe stanga")
@@ -218,7 +219,7 @@ class OneLane:
                                     cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
 
                 else:
-                    self.Referinta = SectiunePrincipala.centre[0]
+                    self.Referinta = SectiuneSecundara.centre[0]
                     self.CentruImaginar = self.Referinta - MedDistanta / 2
                     if ESTE_PE_MASINA:
                         print("Avem o banda pe dreapta")
@@ -285,12 +286,13 @@ while (cap.isOpened()):
     if ret == False:
         break
     counter = counter + 1
-    LocatieDeInteres = 150  # 1450
+    LocatieDeInteres = 0  # 1450
     if counter < LocatieDeInteres:
         continue
     # for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     img = frame
-
+    # if DEBUG_RECORD:
+    #out.write(frame)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     #gray = abs(255 - gray) # in caz ca vrem inversare
     ret, binarization = cv2.threshold(gray, 190, 255, cv2.THRESH_BINARY)
@@ -324,7 +326,7 @@ while (cap.isOpened()):
         cv2.putText(img, "Benzi identificate: "+ str(SectiunePrincipala.NumarStructuri), (10, 460), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
 
     MijlocCamera = int(lungimeCadru / 2.0)
-    EroareCentrare = 20
+    EroareCentrare = 50
     SectiunePrincipala.CalculDistantaBanda()
 
         #END OF TODO DE refactoring
@@ -337,13 +339,16 @@ while (cap.isOpened()):
 
     if ObiectDrum is not None:
         MedDistanta = ObiectDrum.CalculMedDist(SectiunePrincipala, SectiuneSecundara)
+        MijlocGeneric=ObiectDrum.mijlocCalculat
+    else:
+        MijlocGeneric=ObiectBanda.CentruImaginar
 
     #MedDistanta=SectiunePrincipala.MedDistanta
 
 
 
     try:
-        DiferentaFataDeMijloc=MijlocCamera - ObiectDrum.mijlocCalculat
+        DiferentaFataDeMijloc=MijlocCamera - MijlocGeneric
         if  DiferentaFataDeMijloc > EroareCentrare:
             DirectieIdentificata = Directie.STANGA # TODO poate facem asta cu verificare
             pasAdaptare = pasAdaptare - 5
@@ -354,7 +359,7 @@ while (cap.isOpened()):
                 print("<<<<")
                 print("Unghi Adaptat pentru stanga: " + str(pasAdaptare))
         else:
-            if -EroareCentrare < MijlocCamera - mijlocCalculat < EroareCentrare:
+            if -EroareCentrare < DiferentaFataDeMijloc < EroareCentrare:
                 DirectieIdentificata = Directie.CENTRU #TODO
                 if ESTE_PE_MASINA:
                     serialHandler.sendMove(0.0, 0.0)
@@ -384,14 +389,14 @@ while (cap.isOpened()):
     if(not ESTE_PE_MASINA):
         cv2.imshow("Image", img)
     #cv2.imshow("PERSPECTIVA NECALIBRATA", copie)
-    #cv2.imshow("PERSPECTIVA CALIBRATA", undist_copy)
-    #cv2.imshow("binarizare", binarization)
-    # out.write(frame)
+    #cv2.imshow("PERSPECTIVA CALIBRATA", undist_copy)q
+    cv2.imshow("binarizare", binarization)
+
     cv2.waitKey(1)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
     if not ESTE_PE_MASINA:
-        time.sleep(0.3)
+        time.sleep(1)
 
 # rawCapture.truncate(0)
 if ESTE_PE_MASINA:
