@@ -10,7 +10,7 @@ import math
 #from calibration_main import get_camera_calibration
 
 global serialHandler
-
+..
 DEBUG_ALL_DATA= True
 ESTE_PE_MASINA=False
 DISTANTABANDACT = 350
