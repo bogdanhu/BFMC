@@ -40,7 +40,7 @@ def perspective_transform(img):
     # print(vertices)
     # cv2.fillPoly(perspective_img, vertices, 255)
     return perspective_img, Minv
-
+# DSADASDSA
 
 cap = cv2.VideoCapture('camera.avi')
 #cap = cv2.VideoCapture(0)  # pentru camera
