@@ -42,7 +42,7 @@ def perspective_transform(img):
     return perspective_img, Minv
 
 
-cap = cv2.VideoCapture('camera.avi')
+cap = cv2.VideoCapture('demo.avi')
 #cap = cv2.VideoCapture(0)  # pentru camera
 #fourcc = cv2.VideoWriter_fourcc(*'DIVX')
 #out = cv2.VideoWriter('camera.avi', fourcc, 20,(640, 480))
@@ -65,19 +65,17 @@ class Directie:
     CENTRU = 0
     DREAPTA = -1
 
-class SectiuneBanda:
+class Banda:
     def __init__(self):
         self.inaltimeSectiune=0
         self.interesant = False
-        self.pozitieInteresanta = 0
-        self.NumarStructuri = 0
-        self.centre = np.zeros(0)
+        self.pozitieInitiala = 0
+        self.NumarStructuri = 0 # Banda e o structura de sters
+        self.centre = np.zeros(0) # centru benzii e mijloc - de sters
         self.EroareCentru = 50
-        self.EroareCentruTemporar = 0
         self.pozitieMijloc=0
         self.pozitieFinala=0
         self.DistantaBandaFrame=0
-        self.DistantaBandaFrameMediata=0
         self.DistantaBenziVector=np.zeros(0)
         self.MedDistanta=0
         self.mijlocCalculat=0
@@ -103,36 +101,37 @@ class SectiuneBanda:
 
     def ObtineStructuri(self,lungimeCadruAnalizat):
         global binarization,LatimeCadru
+        EroareCentruTemporar=0
         for j in range(1, lungimeCadruAnalizat):
             if self.interesant == True:
                 if binarization[self.inaltimeSectiune, j] == 0:
                     self.interesant = False
-                    if (1 < self.EroareCentruTemporar < self.EroareCentru):
+                    if (1 < EroareCentruTemporar < self.EroareCentru):
                         print("Structuri false. - Nu salvam valoarea")  # de fapt ar trebui sa recalculam centrul nou
                         continue
-                    if(int(self.pozitieFinala-self.pozitieInteresanta)>150):
+                    if(int(self.pozitieFinala-self.pozitieInitiala)>150):
                         print("eliminam o structura prea mare")
                         continue
-                    self.EroareCentruTemporar = 1
+                    EroareCentruTemporar = 1
                     self.pozitieFinala = j
                     self.NumarStructuri= self.NumarStructuri + 1
 
-                    self.pozitieMijloc = int((self.pozitieInteresanta + self.pozitieFinala) / 2)
+                    self.pozitieMijloc = int((self.pozitieInitiala + self.pozitieFinala) / 2)
                     self.centre = np.append(self.centre, self.pozitieMijloc)
-                    self.pozitieInteresanta = 0
+                    self.pozitieInitiala = 0
 
                 elif (j == lungimeCadruAnalizat - 1):
                     self.NumarStructuri = self.NumarStructuri + 1
-                    self.pozitieMijloc = int((self.pozitieInteresanta + j) / 2)
+                    self.pozitieMijloc = int((self.pozitieInitiala + j) / 2)
                     self.centre = np.append(self.centre, self.pozitieMijloc)
             else:
-                if (self.EroareCentruTemporar > 0) and self.EroareCentruTemporar < self.EroareCentru:
-                    self.EroareCentruTemporar = self.EroareCentruTemporar + 1
-                if (self.EroareCentruTemporar == self.EroareCentru):
-                    self.EroareCentruTemporar = 0
+                if (EroareCentruTemporar > 0) and EroareCentruTemporar < self.EroareCentru:
+                    EroareCentruTemporar = EroareCentruTemporar + 1
+                if (EroareCentruTemporar == self.EroareCentru):
+                    EroareCentruTemporar = 0
             if binarization[self.inaltimeSectiune, j] > 1 and self.interesant == False:
                     self.interesant = True
-                    self.pozitieInteresanta = j
+                    self.pozitieInitiala = j
 
 class TwoLanes:
     def __init__(self, SectiunePrincipala, SectiuneSecundara):
@@ -300,8 +299,8 @@ while (cap.isOpened()):
 
     #  print("Dimensiune imagine:" + str(binarization[160,:].size))
     #array = np.argwhere(binarization[int(LatimeCadru * 2.0 / 3), :] > 1)
-    SectiunePrincipala = SectiuneBanda()
-    SectiuneSecundara = SectiuneBanda()
+    SectiunePrincipala = Banda()
+    SectiuneSecundara = Banda()
 
 
 
