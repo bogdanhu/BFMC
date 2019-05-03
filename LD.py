@@ -13,8 +13,8 @@ global serialHandler
 
 #TEST COMMIT3232
 
-DEBUG_ALL_DATA= True
-ESTE_PE_MASINA=False
+DEBUG_ALL_DATA = True
+ESTE_PE_MASINA = False
 DISTANTABANDACT = 350
 
 # todo1 - calibrare unghi atac camera si salvarea valorii medie in DistantaBanda (o constanta pe care o sa o folosim pentru a determina inclinatia fata de AX
@@ -350,7 +350,7 @@ while (cap.isOpened()):
 
 
     try:
-        DiferentaFataDeMijloc=MijlocCamera - MijlocGeneric
+        DiferentaFataDeMijloc = abs(MijlocCamera - MijlocGeneric)
         if  DiferentaFataDeMijloc > EroareCentrare:
             DirectieIdentificata = Directie.STANGA # TODO poate facem asta cu verificare
             pasAdaptare = pasAdaptare - 5
@@ -379,6 +379,7 @@ while (cap.isOpened()):
     except Exception as e:
         print(e)
         pass
+
     if SectiunePrincipala.centre.size == 2 and not ESTE_PE_MASINA:
            ObiectDrum.draw()
     else:
@@ -394,9 +395,8 @@ while (cap.isOpened()):
         cv2.waitKey(1)
     #cv2.imshow("PERSPECTIVA NECALIBRATA", copie)
     #cv2.imshow("PERSPECTIVA CALIBRATA", undist_copy)q
-    cv2.imshow("binarizare", binarization)
 
-    cv2.waitKey(1)
+
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
     if not ESTE_PE_MASINA:
