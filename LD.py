@@ -390,6 +390,8 @@ while (cap.isOpened()):
     # print("Valoare Medie Benzi:"+str(np.average(DistanteBenzi)))
     if(not ESTE_PE_MASINA):
         cv2.imshow("Image", img)
+        cv2.imshow("binarizare", binarization)
+        cv2.waitKey(1)
     #cv2.imshow("PERSPECTIVA NECALIBRATA", copie)
     #cv2.imshow("PERSPECTIVA CALIBRATA", undist_copy)q
     cv2.imshow("binarizare", binarization)
