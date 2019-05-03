@@ -11,11 +11,10 @@ import math
 
 global serialHandler
 
-#TEST COMMIT32323A
+#TEST COMMIT3232
 
-DEBUG_RECORD = True
 DEBUG_ALL_DATA = True
-ESTE_PE_MASINA = True
+ESTE_PE_MASINA = False
 DISTANTABANDACT = 350
 
 # todo1 - calibrare unghi atac camera si salvarea valorii medie in DistantaBanda (o constanta pe care o sa o folosim pentru a determina inclinatia fata de AX
@@ -41,13 +40,12 @@ def perspective_transform(img):
     # print(vertices)
     # cv2.fillPoly(perspective_img, vertices, 255)
     return perspective_img, Minv
-# DSADASDSA
 
-#cap = cv2.VideoCapture('demo.avi')
-cap = cv2.VideoCapture(0)  # pentru camera
-fourcc = cv2.VideoWriter_fourcc(*'DIVX')
-if DEBUG_RECORD:
-    out = cv2.VideoWriter('camera.avi', fourcc, 20,(640, 480))
+
+cap = cv2.VideoCapture('camera.avi')
+#cap = cv2.VideoCapture(0)  # pentru camera
+#fourcc = cv2.VideoWriter_fourcc(*'DIVX')
+#out = cv2.VideoWriter('camera.avi', fourcc, 20,(640, 480))
 counter = 0
 #f = open('deplasare.txt', 'w')
 # global serialHandler
@@ -112,9 +110,13 @@ class SectiuneBanda:
                     if (1 < self.EroareCentruTemporar < self.EroareCentru):
                         print("Structuri false. - Nu salvam valoarea")  # de fapt ar trebui sa recalculam centrul nou
                         continue
+                    if(int(self.pozitieFinala-self.pozitieInteresanta)>150):
+                        print("eliminam o structura prea mare")
+                        continue
                     self.EroareCentruTemporar = 1
                     self.pozitieFinala = j
                     self.NumarStructuri= self.NumarStructuri + 1
+
                     self.pozitieMijloc = int((self.pozitieInteresanta + self.pozitieFinala) / 2)
                     self.centre = np.append(self.centre, self.pozitieMijloc)
                     self.pozitieInteresanta = 0
@@ -144,15 +146,16 @@ class TwoLanes:
             cv2.rectangle(img, (int(SectiuneSecundara.centre[0] - 20), int(lungimeCadru * 2.0 / 3)),
                           (int(SectiuneSecundara.centre[1] + 20), int(lungimeCadru * 2.0 / 3)), (0, 0, 255), 5,
                           lineType=8)
-            for centru in SectiunePrincipala.centre:
-                # print(int(centru))
-                cv2.putText(img, str(centru), (int(centru - 20), int(LatimeCadru * 2.0 / 3)), cv2.FONT_HERSHEY_SIMPLEX,
-                            1,
-                            (0, 0, 0), 2)
-            for centru2 in SectiuneSecundara.centre:
-                cv2.putText(img, str(centru2), (int(centru2 - 20), int(LatimeCadru * 4.0 / 5)),
-                            cv2.FONT_HERSHEY_SIMPLEX, 1,
-                            (0, 0, 0), 2)
+        for centru in SectiunePrincipala.centre :
+            # print(int(centru))
+            cv2.putText(img, str(centru), (int(centru - 20), int(LatimeCadru * 2.0 / 3)), cv2.FONT_HERSHEY_SIMPLEX,
+                        1,
+                        (0, 0, 0), 2)
+        for centru2 in SectiuneSecundara.centre :
+            cv2.putText(img, str(centru2), (int(centru2 - 20), int(LatimeCadru * 4.0 / 5)),
+                        cv2.FONT_HERSHEY_SIMPLEX, 1,
+                        (0, 0, 0), 2)
+
 
         if SectiunePrincipala.centre.size > 1:
             cv2.arrowedLine(img, (int(lungimeCadru / 2), 300), (int(self.mijlocCalculat), 300), (255, 255, 125), 2)
@@ -184,23 +187,6 @@ class TwoLanes:
             self.mijlocCalculat = SectiunePrincipala.mijlocCalculat
             DistantaFataDeAx = SectiunePrincipala.DistantaFataDeAx
             # DistantaFataDeAx = abs(mijlocCalculat - int(lungimeCadru / 2))
-
-            if (-1 <= RaportIntreBenzi <= 1):
-                alphaRadian = np.arccos(RaportIntreBenzi)
-                alphaDegrees = np.rad2deg(alphaRadian)
-            else:
-                print("Nu putem calcula unghiul pt " + str(RaportIntreBenzi))
-
-            if (MijlocCamera > (self.mijlocCalculat + EroareCentrare)):
-                print("O luam spre stanga cu unghiul " + str(alphaDegrees))
-            # f.write('2\t' + str(round(alphaDegrees, 2)) + '\n')
-            elif (MijlocCamera < (self.mijlocCalculat + EroareCentrare)):
-                alphaDegrees = -round(alphaDegrees, 2)
-                # $f.write('1\t' + str(round(alphaDegrees, 2)) + '\n')
-                print("O luam spre dreapta" + str(alphaDegrees))
-            else:
-                # f.write('0' + '\n')
-                print("Suntem pe centru")
 
         return self.MedDistanta
 
@@ -297,17 +283,16 @@ while (cap.isOpened()):
         continue
     else:
         counterTemp=0
-    if DEBUG_RECORD:
-        out.write(frame)
     counter = counter + 1
     LocatieDeInteres = 0
     if (not ESTE_PE_MASINA):
-        LocatieDeInteres = 150  # 1450
+        LocatieDeInteres = 0  # 1450
     if counter < LocatieDeInteres:
         continue
     # for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     img = frame
-
+    # if DEBUG_RECORD:
+    #out.write(frame)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     #gray = abs(255 - gray) # in caz ca vrem inversare
     ret, binarization = cv2.threshold(gray, 190, 255, cv2.THRESH_BINARY)
@@ -327,13 +312,14 @@ while (cap.isOpened()):
     SectiuneSecundara.ObtineStructuri(lungimeCadru)
 
     PutLines()
-    try :
+    ## Aici nu e ok, TODO
+    try:
         del ObiectDrum
-    except :
+    except:
         pass
-    try :
+    try:
         del ObiectBanda
-    except :
+    except:
         pass
 
     if SectiunePrincipala.centre.size == 2:
@@ -359,7 +345,6 @@ while (cap.isOpened()):
         # END Afisare Centre
     if mijlocCalculat is  None:
         continue
-
     if 'ObiectDrum' in locals() :
         MedDistanta = ObiectDrum.CalculMedDist(SectiunePrincipala, SectiuneSecundara)
         MijlocGeneric=ObiectDrum.mijlocCalculat
@@ -381,6 +366,10 @@ while (cap.isOpened()):
                 serialHandler.sendMove(20.0, pasAdaptare)
                 print("<<<<")
                 print("Unghi Adaptat pentru stanga: " + str(pasAdaptare))
+            else:
+                cv2.putText(img, "O luam la stanga", (10, 380),
+                            cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
+
         else:
             if -EroareCentrare < DiferentaFataDeMijloc < EroareCentrare:
                 DirectieIdentificata = Directie.CENTRU #TODO
@@ -394,6 +383,9 @@ while (cap.isOpened()):
                     serialHandler.sendMove(20.0, 5.0 + pasAdaptare)
                     print(">>>>>>")
                     print("Unghi Adaptat pentru dreapta:\t" + str(pasAdaptare))
+                else:
+                    cv2.putText(img, "O luam la dreapta", (10, 380),
+                                cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
                 pasAdaptare = pasAdaptare + 5
                 if (pasAdaptare > (23)):
                     pasAdaptare = 22
@@ -413,15 +405,15 @@ while (cap.isOpened()):
     if(not ESTE_PE_MASINA):
         cv2.imshow("Image", img)
         cv2.imshow("binarizare", binarization)
-        cv2.waitKey(1)
+        cv2.waitKey(0)
     #cv2.imshow("PERSPECTIVA NECALIBRATA", copie)
     #cv2.imshow("PERSPECTIVA CALIBRATA", undist_copy)q
 
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-    if not ESTE_PE_MASINA:
-        time.sleep(1)
+    #if not ESTE_PE_MASINA:
+    #    time.sleep(1)
 
 # rawCapture.truncate(0)
 if ESTE_PE_MASINA:
@@ -429,7 +421,6 @@ if ESTE_PE_MASINA:
     serialHandler.close()
 
 # parcurgem centru si afisam cu cv2.putText(frame,"text",(coordx,coordy,cv2.FONT_fONT_HERSHEY_SIMPLEX,0.3,255)
-if DEBUG_RECORD:
-    out.release()
+#out.release()
 cap.release()
 cv2.destroyAllWindows()
