@@ -12,11 +12,8 @@ global serialHandler
 DEBUG_ALL_DATA = True
 ESTE_PE_MASINA = False
 DISTANTABANDACT = 350
-AMPARCAT = False
-
 
 cap = cv2.VideoCapture('demo.avi')
-
 CentruImaginar = 0
 EroareCentrare = 50
 DistanteBenzi = np.zeros(0)
@@ -26,7 +23,6 @@ pozitieMijlocAnterior = -1
 counter = 0
 
 global serialHandler
-counterStop=0
 if ESTE_PE_MASINA:
     serialHandler = SerialHandler.SerialHandler("/dev/ttyACM0")
     serialHandler.startReadThread()
@@ -35,6 +31,7 @@ class Directie:
     STANGA = -1
     CENTRU = 0
     DREAPTA = -1
+
 
 class Indicator:
     STOP = 1
@@ -75,8 +72,11 @@ class TwoLanes:
         if self.Sectiune.centre.size == 2:
             print("BINE")
              #  DE REVIZUIT 1)
+
             #cv2.rectangle(img, (int(SectiuneSecundara.centre[0] - 20), int(lungimeCadru * 2.0 / 3)),
+
              #             (int(SectiuneSecundara.centre[1] + 20), int(lungimeCadru * 2.0 / 3)), (0, 0, 255), 5,
+
              #             lineType=8)
         for centru in self.Sectiune.centre:
             cv2.putText(img, str(centru), (int(centru - 20), int(LatimeCadru * 2.0 / 3)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
@@ -86,7 +86,6 @@ class TwoLanes:
             cv2.putText(img, "Dist: " + str(DiferentaFataDeMijloc), (int(lungimeCadru / 2 + 50), 300),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.5, (60, 0, 60), 1)
             cv2.line(img, (int(self.mijlocCalculat), 0), (int(self.mijlocCalculat), LatimeCadru), (255, 125, 125), 5)
-
 
     def setDistantaDrum(self,valoare):
         self.MedDistanta=valoare
@@ -101,7 +100,6 @@ class TwoLanes:
             else:
                 self.setDistantaDrum(np.average(DistanteBenzi))
                 print("BAAAAAAAAAADupa 3 cadre, distanta medie dintre benzi este: " + str(self.MedDistanta))
-
             self.mijlocCalculat = self.Sectiune.mijlocCalculat
         return self.MedDistanta
 
@@ -123,11 +121,11 @@ class OneLane:
                 cv2.putText(img, "Pozitie Relativa Mijloc Imaginar: " + str(self.CentruImaginar), (10, 420),
                             cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
             else:
-                    self.Referinta = self.Sectiune.centre[0]
-                    self.CentruImaginar = self.Referinta - (MedDistanta / 2)
-                    print("Avem o banda pe dreapta")
-                    print("Nu exista banda pe partea stanga, pozitia ei aproximata este " + str(self.CentruImaginar))
-                    cv2.putText(img, "Pozitie Relativa Mijloc Imaginar: " + str(self.CentruImaginar), (10, 420), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
+                self.Referinta = self.Sectiune.centre[0]
+                self.CentruImaginar = self.Referinta - (MedDistanta / 2)
+                print("Avem o banda pe dreapta")
+                print("Nu exista banda pe partea stanga, pozitia ei aproximata este " + str(self.CentruImaginar))
+                cv2.putText(img, "Pozitie Relativa Mijloc Imaginar: " + str(self.CentruImaginar), (10, 420), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
 
             for centru in self.Sectiune.centre:
                 cv2.putText(img, str(centru), (int(centru - 20), int(LatimeCadru * 2.0 / 3)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
@@ -141,14 +139,12 @@ class OneLane:
             cv2.putText(img, "Dist: " + str(abs(int(MijlocCamera - self.CentruImaginar))), (int(lungimeCadru / 2 + 50), 300),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.5, (60, 0, 60), 1)
 
-
 def PutLines():
     LatimeCadru, lungimeCadru, _ = frame.shape
     cv2.line(img, (0, int(LatimeCadru * 2.0 / 3)), (lungimeCadru, Sectiune.inaltimeSectiune), (255, 255, 0), 2)
     cv2.line(img, (int(lungimeCadru / 2), 0), (int(lungimeCadru / 2), LatimeCadru), (255, 255, 255), 2)
 
 while (cap.isOpened()):
-
     ret, frame = cap.read()
     if ret is False:
         break
@@ -157,16 +153,15 @@ while (cap.isOpened()):
     if not ESTE_PE_MASINA:
         cv2.putText(img, "Cadrul: " + str(counter), (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.4,
                     (250, 250, 250), 2)
-
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     ret, binarization = cv2.threshold(gray, 190, 255, cv2.THRESH_BINARY)
     LatimeCadru, lungimeCadru, _ = frame.shape
     MijlocCamera = int(lungimeCadru / 2.0)
     Sectiune = Banda()
     Sectiune.setInaltimeSectiune(LatimeCadru * 2.0 / 3)#66.6 % din camera
-    BenziPrincipale = ObtineStructuri(lungimeCadru,int(LatimeCadru * 2.0 / 3),binarization)
-    DrumPrincipal=Drum(BenziPrincipale)
-    Sectiune.ObtineStructuri(lungimeCadru, binarization, LatimeCadru)
+    #BenziPrincipale = ObtineStructuri(int(LatimeCadru * 2.0 / 3), binarization)
+    #DrumPrincipal=Drum(BenziPrincipale)
+    Sectiune.ObtineStructuri(lungimeCadru, binarization)
     Sectiune.SetNumeBanda("Sect. Pp")
     Sectiune.CalculDistantaBanda(lungimeCadru)
     fps = cap.get(cv2.CAP_PROP_FPS)
@@ -176,9 +171,6 @@ while (cap.isOpened()):
     else:
         print("Frames per second using video.get(cv2.CAP_PROP_FPS) : {0}".format(fps))
     PutLines()
-
-    ## Aici nu e ok, TODO
-
     try:
         del ObiectDrum
     except:
@@ -241,6 +233,7 @@ while (cap.isOpened()):
                 pasAdaptare = pasAdaptare + 5
                 if (pasAdaptare > (23)):
                     pasAdaptare = 22
+
     except Exception as e:
         print(e)
         pass
@@ -261,7 +254,5 @@ if ESTE_PE_MASINA:
     serialHandler.sendPidActivation(False)
     serialHandler.close()
 
-
 cap.release()
-
 cv2.destroyAllWindows()
