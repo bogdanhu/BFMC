@@ -299,7 +299,7 @@ def PutLines():
     cv2.line(img, (0, int(LatimeCadru * 4.0 / 5)), (lungimeCadru, SectiuneSecundara.inaltimeSectiune), (0, 255, 0), 2)
     cv2.line(img, (int(lungimeCadru / 2), 0), (int(lungimeCadru / 2), LatimeCadru), (255, 255, 255), 2)
 
-counterTemp=0
+CounterFolositPentruAMasuraStarea=0
 
 SectiunePrincipalaIstoric = Banda()
 SectiuneSecundaraIstoric = Banda()
@@ -312,12 +312,11 @@ while (cap.isOpened()):
     if ret == False:
         break
 
-    counterTemp=counterTemp+1
-    if counterTemp<2:
-        continue
-    else:
-        counterTemp=0
     counter = counter + 1
+
+
+    if(CounterFolositPentruAMasuraStarea>0):
+        CounterFolositPentruAMasuraStarea = CounterFolositPentruAMasuraStarea + 1
 
     LocatieDeInteres = 0
 
@@ -325,22 +324,48 @@ while (cap.isOpened()):
 
 
     if (not ESTE_PE_MASINA):
-        LocatieDeInteres = 0  # 1450
+        LocatieDeInteres = 800  # 1450
     if counter < LocatieDeInteres:
         continue
     # for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     img = frame
 
-    AnalizaCadru=stopOrPark(frame)
-    if AnalizaCadru is not None:
+    AnalizaCadru=stopOrPark(frame,AMPARCAT)
+
+    if (CounterFolositPentruAMasuraStarea>50 and masina.current_state==masina.ParcareLaterala):#am pus un 50 aiurea
+        masina.PleacaDinParcare()
+        CounterFolositPentruAMasuraStarea=1
+
+    if (CounterFolositPentruAMasuraStarea>50 and masina.current_state==masina.Opreste):#am pus un 50 aiurea
+        masina.PleacaDeLaStop()
+        CounterFolositPentruAMasuraStarea=0
+
+    if (CounterFolositPentruAMasuraStarea>50 and masina.current_state==masina.PlecareDinParcare):#am pus un 50 aiurea
+        masina.MergiInainteDupaParcare()
+        CounterFolositPentruAMasuraStarea=0 #nu mai trebuie sa contabilizam cadrele
+
+
+    if AnalizaCadru is not None: #adica avem un hit
         if AnalizaCadru==Indicator.STOP:
             print("avem stop")
+            if (masina.current_state == masina.MergiInainte) :  # verific ca sunt in starea initiala
+                masina.stop()
+                CounterFolositPentruAMasuraStarea = 1
+            else:
+                print("dar nu sunt in starea de mers")
         elif AnalizaCadru==Indicator.PARCARE:
             print("avem parcare")
-    cv2.imshow("Frame", frame)  # afiseaza ce se inregistreaza live.
+            if (masina.current_state == masina.MergiInainte) :  # verific ca sunt in starea initiala
+                if (counter>415): #TODO - de sters, pentru ca e doar temporar- implementare cand masina stare este MergiInainteDupaUturn
+                    AMPARCAT = True
+                    masina.Parcheaza()
+                    CounterFolositPentruAMasuraStarea=1
+            else:
+                print("dar nu sunt in starea de mers")
 
-
-
+    if (not ESTE_PE_MASINA) :
+        cv2.putText(img, "Cadrul: " + str(counter), (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.4,
+                    (250, 250, 250), 2)
     # if DEBUG_RECORD:
     #out.write(frame)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -365,10 +390,8 @@ while (cap.isOpened()):
     DrumPrincipal=Drum(BenziPrincipale)
     DrumSecundar=Drum(BenziSecundare)
 
-    if (len(BenziPrincipale)==2 and len(BenziSecundare)==2): #trigger de drum
-        if (masina.current_state == masina.MergiInainte) :  #verific ca sunt in starea initiala
-            masina.stop()
 
+    if (len(BenziPrincipale)==2 and len(BenziSecundare)==2): #trigger de drum
         if (DEBUG_ALL_DATA and not ESTE_PE_MASINA):
             print("Diferenta intre Drumuri:"+str(DrumPrincipal.Centru-DrumSecundar.Centru))
         if(abs(DrumPrincipal.Centru-DrumSecundar.Centru)>EroareCentrare):
