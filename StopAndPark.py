@@ -8,7 +8,7 @@ class Indicator:
 
 
 font = cv2.FONT_HERSHEY_COMPLEX
-def stopOrPark(frame):
+def stopOrPark(frame,AMPARCAT=False):
     #frame = cv2.resize(frame, None, fx=0.5, fy=0.6, interpolation=cv2.INTER_CUBIC)
     frame = frame[0:350, 320:640]
     counterBlue = 0
@@ -39,7 +39,7 @@ def stopOrPark(frame):
     kernelBlue = np.ones((1, 1), np.uint8)
     maskBlue = cv2.erode(maskBlue, kernelBlue)
     contoursRed, none = cv2.findContours(maskRed, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    contoursBlue, none = cv2.findContours(maskBlue, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
     contoursWhite, none = cv2.findContours(maskWhite, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     for cnt in contoursRed:
@@ -59,6 +59,10 @@ def stopOrPark(frame):
                 return Indicator.STOP
 
     # ALBASTRU
+    ## TODO: sa cautam aici doar dupa ce facem U turn - adica sa avem o stare MergInainteDupaUturn
+    if AMPARCAT==True:
+        return None
+    contoursBlue, none = cv2.findContours(maskBlue, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
     for cnt in contoursBlue:
         haveWhite = False
         area = cv2.contourArea(cnt)

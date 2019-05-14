@@ -9,53 +9,8 @@ import numpy as np
 import math
 from Banda import Banda
 #from calibration_main import get_camera_calibration
-def ObtineStructuri(lungimeCadruAnalizat,inaltimeSectiune,binarization) :
-    EroareCentruTemporar = 0
-    interesant=False
-    EroareCentru = 10
-    pozitieFinala=0
-    NumarStructuri=0
-    Benzi = np.zeros(0)
-    BandaNoua=None
 
-    for j in range(1, lungimeCadruAnalizat) :
-        if interesant == True :
-            if binarization[inaltimeSectiune, j] == 0 :
-                interesant = False
-                if (1 < EroareCentruTemporar < EroareCentru) :
-                    if (DEBUG_ALL_DATA and ESTE_PE_MASINA):
-                        print("Structuri false. - Nu salvam valoarea")  # de fapt ar trebui sa recalculam centrul nou
-                    continue
-                if (int(pozitieFinala - pozitieInitiala) > 150) :
-                    print("eliminam o structura prea mare")
-                    continue
-                EroareCentruTemporar = 1
-                pozitieFinala = j
-                NumarStructuri = NumarStructuri + 1
-
-                pozitieMijloc = int((pozitieInitiala + pozitieFinala) / 2)
-                BandaNoua=Banda()
-                BandaNoua.SetMijlocCalculat(pozitieMijloc)
-                Benzi = np.append(Benzi, BandaNoua)
-                pozitieInitiala = 0
-
-            elif (j == lungimeCadruAnalizat - 1) :
-                NumarStructuri = NumarStructuri + 1
-                pozitieMijloc = int((pozitieInitiala + j) / 2)
-                BandaNoua = Banda()
-                BandaNoua.SetMijlocCalculat(pozitieMijloc)
-                Benzi = np.append(Benzi, BandaNoua)
-                #Aici adaugam o banda !
-        else :
-            if (EroareCentruTemporar > 0) and EroareCentruTemporar < EroareCentru :
-                EroareCentruTemporar = EroareCentruTemporar + 1
-            if (EroareCentruTemporar == EroareCentru) :
-                EroareCentruTemporar = 0
-        if binarization[inaltimeSectiune, j] > 1 and interesant == False :
-            interesant = True
-            pozitieInitiala = j
-    return Benzi
-import imutils
+import imutils # TODO: de sters daca nu transformam nimic
 from Observer import DeplasareMasina
 from StopAndPark import stopOrPark
 
@@ -392,22 +347,6 @@ while (cap.isOpened()):
     SectiunePrincipala.setInaltimeSectiune(LatimeCadru * 2.0 / 3)#66.6 % din camera
     SectiuneSecundara.setInaltimeSectiune(LatimeCadru * 4.0 / 5) #80 % din camera - jos
 
-
-    BenziPrincipale=ObtineStructuri(lungimeCadru,int(LatimeCadru * 2.0 / 3),binarization)
-    BenziSecundare= ObtineStructuri(lungimeCadru, int(LatimeCadru * 4.0 / 5), binarization)
-
-    # aici calculez MedDistanta
-    Benzi=np.append(BenziPrincipale,BenziSecundare)
-    DrumPrincipal=Drum(BenziPrincipale)
-    DrumSecundar=Drum(BenziSecundare)
-
-
-    if (len(BenziPrincipale)==2 and len(BenziSecundare)==2): #trigger de drum
-        if (DEBUG_ALL_DATA and not ESTE_PE_MASINA):
-            print("Diferenta intre Drumuri:"+str(DrumPrincipal.Centru-DrumSecundar.Centru))
-        if(abs(DrumPrincipal.Centru-DrumSecundar.Centru)>EroareCentrare):
-            print("Urmeaza o curba")
-            cv2.waitKey(0)
     SectiunePrincipala.ObtineStructuri(lungimeCadru,binarization,LatimeCadru)
     SectiuneSecundara.ObtineStructuri(lungimeCadru,binarization,LatimeCadru)
     SectiunePrincipala.SetNumeBanda("Sect. Pp")
