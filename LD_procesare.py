@@ -7,15 +7,67 @@ import time
 import cv2
 import numpy as np
 import math
+from Banda import Banda
 #from calibration_main import get_camera_calibration
+def ObtineStructuri(lungimeCadruAnalizat,inaltimeSectiune,binarization) :
+    EroareCentruTemporar = 0
+    interesant=False
+    EroareCentru = 10
+    pozitieFinala=0
+    NumarStructuri=0
+    Benzi = np.zeros(0)
+    BandaNoua=None
+
+    for j in range(1, lungimeCadruAnalizat) :
+        if interesant == True :
+            if binarization[inaltimeSectiune, j] == 0 :
+                interesant = False
+                if (1 < EroareCentruTemporar < EroareCentru) :
+                    if (DEBUG_ALL_DATA and ESTE_PE_MASINA):
+                        print("Structuri false. - Nu salvam valoarea")  # de fapt ar trebui sa recalculam centrul nou
+                    continue
+                if (int(pozitieFinala - pozitieInitiala) > 150) :
+                    print("eliminam o structura prea mare")
+                    continue
+                EroareCentruTemporar = 1
+                pozitieFinala = j
+                NumarStructuri = NumarStructuri + 1
+
+                pozitieMijloc = int((pozitieInitiala + pozitieFinala) / 2)
+                BandaNoua=Banda()
+                BandaNoua.SetMijlocCalculat(pozitieMijloc)
+                Benzi = np.append(Benzi, BandaNoua)
+                pozitieInitiala = 0
+
+            elif (j == lungimeCadruAnalizat - 1) :
+                NumarStructuri = NumarStructuri + 1
+                pozitieMijloc = int((pozitieInitiala + j) / 2)
+                BandaNoua = Banda()
+                BandaNoua.SetMijlocCalculat(pozitieMijloc)
+                Benzi = np.append(Benzi, BandaNoua)
+                #Aici adaugam o banda !
+        else :
+            if (EroareCentruTemporar > 0) and EroareCentruTemporar < EroareCentru :
+                EroareCentruTemporar = EroareCentruTemporar + 1
+            if (EroareCentruTemporar == EroareCentru) :
+                EroareCentruTemporar = 0
+        if binarization[inaltimeSectiune, j] > 1 and interesant == False :
+            interesant = True
+            pozitieInitiala = j
+    return Benzi
+import imutils
+from Observer import DeplasareMasina
+from StopAndPark import stopOrPark
 
 global serialHandler
-
-#TEST COMMIT3232
-
 DEBUG_ALL_DATA = True
 ESTE_PE_MASINA = False
 DISTANTABANDACT = 350
+AMPARCAT=False
+
+#TEST COMMIT3232
+
+
 
 # todo1 - calibrare unghi atac camera si salvarea valorii medie in DistantaBanda (o constanta pe care o sa o folosim pentru a determina inclinatia fata de AX
 # todo2 - cum intra in curbe
@@ -50,6 +102,7 @@ counter = 0
 #f = open('deplasare.txt', 'w')
 # global serialHandler
 CentruImaginar = 0
+EroareCentrare = 50
 DistanteBenzi = np.zeros(0)
 mijlocCalculat=0
 pasAdaptare = 0
@@ -65,73 +118,47 @@ class Directie:
     CENTRU = 0
     DREAPTA = -1
 
-class Banda:
+class Indicator:
+    STOP = 1
+    PARCARE = 2
+    Eroare = 3
+
+class Drum:
     def __init__(self):
-        self.inaltimeSectiune=0
-        self.interesant = False
-        self.pozitieInitiala = 0
-        self.NumarStructuri = 0 # Banda e o structura de sters
-        self.centre = np.zeros(0) # centru benzii e mijloc - de sters
-        self.EroareCentru = 50
-        self.pozitieMijloc=0
-        self.pozitieFinala=0
-        self.DistantaBandaFrame=0
-        self.DistantaBenziVector=np.zeros(0)
+        self.BandaStanga= Banda()
+        self.BandaDreapta=Banda()
+        self.Centru=0
         self.MedDistanta=0
-        self.mijlocCalculat=0
-
-    def setInaltimeSectiune(self,valoare):
-        self.inaltimeSectiune=int(valoare)
-
-    def CalculDistantaBanda(self):
+    def __init__(self,Benzi):
         global lungimeCadru
-        if self.centre.size == 2 :
-            self.DistantaBandaFrame = self.centre[1] - self.centre[0]
-            print("Distanta dintre banda dreapta si cea stanga este: " + str(self.DistantaBandaFrame))
-            self.MediereDistantaBanda()
-            self.mijlocCalculat = int((self.centre[0] + self.centre[1]) / 2)
-            self.DistantaFataDeAx = abs(self.mijlocCalculat - int(lungimeCadru / 2))
-
-    def MediereDistantaBanda(self):
-        if (self.DistantaBenziVector.__len__() < 3) :
-            self.DistantaBenziVector = np.append(self.DistantaBenziVector, self.DistantaBandaFrame)
-        else :
-            self.MedDistanta = np.average(self.DistanteBenzi)
-            print("Dupa 3 cadre, distanta medie dintre benzi este: " + str(self.MedDistanta))
-
-    def ObtineStructuri(self,lungimeCadruAnalizat):
-        global binarization,LatimeCadru
-        EroareCentruTemporar=0
-        for j in range(1, lungimeCadruAnalizat):
-            if self.interesant == True:
-                if binarization[self.inaltimeSectiune, j] == 0:
-                    self.interesant = False
-                    if (1 < EroareCentruTemporar < self.EroareCentru):
-                        print("Structuri false. - Nu salvam valoarea")  # de fapt ar trebui sa recalculam centrul nou
-                        continue
-                    if(int(self.pozitieFinala-self.pozitieInitiala)>150):
-                        print("eliminam o structura prea mare")
-                        continue
-                    EroareCentruTemporar = 1
-                    self.pozitieFinala = j
-                    self.NumarStructuri= self.NumarStructuri + 1
-
-                    self.pozitieMijloc = int((self.pozitieInitiala + self.pozitieFinala) / 2)
-                    self.centre = np.append(self.centre, self.pozitieMijloc)
-                    self.pozitieInitiala = 0
-
-                elif (j == lungimeCadruAnalizat - 1):
-                    self.NumarStructuri = self.NumarStructuri + 1
-                    self.pozitieMijloc = int((self.pozitieInitiala + j) / 2)
-                    self.centre = np.append(self.centre, self.pozitieMijloc)
+        if(len(Benzi)==0):
+            return
+        if(len(Benzi)==2):
+            self.BandaStanga = Benzi[0]
+            self.BandaDreapta = Benzi[1]
+            self.Centru = int((self.BandaStanga.mijlocCalculat + self.BandaDreapta.mijlocCalculat) / 2)
+        if(len(Benzi)==1):
+            if(Benzi[0].pozitieMijloc<=lungimeCadru/2):
+                self.BandaStanga=Benzi[0]
+              #  self.BandaDreapta=Benzi[1]
+            #    self.Centru=int((self.BandaStanga+self.BandaDreapta.mijlocCalculat)/2)
             else:
-                if (EroareCentruTemporar > 0) and EroareCentruTemporar < self.EroareCentru:
-                    EroareCentruTemporar = EroareCentruTemporar + 1
-                if (EroareCentruTemporar == self.EroareCentru):
-                    EroareCentruTemporar = 0
-            if binarization[self.inaltimeSectiune, j] > 1 and self.interesant == False:
-                    self.interesant = True
-                    self.pozitieInitiala = j
+                self.BandaDreapta=Benzi[0]
+
+        #calculam
+        #for Banda in Benzi:
+
+        #self.BandaStanga = BandaStanga
+        #self.BandaDreapta = BandaDreapta
+        #self.Centru = (BandaStanga.pozitieMijloc+BandaDreapta.pozitieMijloc)/2
+        #self.MedDistanta = abs(BandaStanga.pozitieMijloc-BandaDreapta.pozitieMijloc)
+    #def __init__(self, BandaNecunoscuta) :
+     #   if (BandaNecunoscuta.pozitieMijloc<320):
+      #      self.BandaStanga=BandaNecunoscuta
+       #     #self.BandaDrepta=calculeazaBanda(pozitieMijloc,mediaUltimelorDrumuriBanda)
+        #    pass
+        #self.Centru = (BandaStanga.pozitieMijloc + BandaDreapta.pozitieMijloc) / 2
+        #self.MedDistanta = mediaUltimelorDrumuriBanda
 
 class TwoLanes:
     def __init__(self, SectiunePrincipala, SectiuneSecundara):
@@ -273,23 +300,47 @@ def PutLines():
     cv2.line(img, (int(lungimeCadru / 2), 0), (int(lungimeCadru / 2), LatimeCadru), (255, 255, 255), 2)
 
 counterTemp=0
+
+SectiunePrincipalaIstoric = Banda()
+SectiuneSecundaraIstoric = Banda()
+masina = DeplasareMasina()
+
 while (cap.isOpened()):
+    if (masina.current_state == masina.initializare) :
+        masina.PleacaDeLaStart()
     ret, frame = cap.read()
     if ret == False:
         break
+
     counterTemp=counterTemp+1
     if counterTemp<2:
         continue
     else:
         counterTemp=0
     counter = counter + 1
+
     LocatieDeInteres = 0
+
+
+
+
     if (not ESTE_PE_MASINA):
         LocatieDeInteres = 0  # 1450
     if counter < LocatieDeInteres:
         continue
     # for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
     img = frame
+
+    AnalizaCadru=stopOrPark(frame)
+    if AnalizaCadru is not None:
+        if AnalizaCadru==Indicator.STOP:
+            print("avem stop")
+        elif AnalizaCadru==Indicator.PARCARE:
+            print("avem parcare")
+    cv2.imshow("Frame", frame)  # afiseaza ce se inregistreaza live.
+
+
+
     # if DEBUG_RECORD:
     #out.write(frame)
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -302,13 +353,41 @@ while (cap.isOpened()):
     SectiunePrincipala = Banda()
     SectiuneSecundara = Banda()
 
-
-
     SectiunePrincipala.setInaltimeSectiune(LatimeCadru * 2.0 / 3)#66.6 % din camera
     SectiuneSecundara.setInaltimeSectiune(LatimeCadru * 4.0 / 5) #80 % din camera - jos
 
-    SectiunePrincipala.ObtineStructuri(lungimeCadru)
-    SectiuneSecundara.ObtineStructuri(lungimeCadru)
+
+    BenziPrincipale=ObtineStructuri(lungimeCadru,int(LatimeCadru * 2.0 / 3),binarization)
+    BenziSecundare= ObtineStructuri(lungimeCadru, int(LatimeCadru * 4.0 / 5), binarization)
+
+    # aici calculez MedDistanta
+    Benzi=np.append(BenziPrincipale,BenziSecundare)
+    DrumPrincipal=Drum(BenziPrincipale)
+    DrumSecundar=Drum(BenziSecundare)
+
+    if (len(BenziPrincipale)==2 and len(BenziSecundare)==2): #trigger de drum
+        if (masina.current_state == masina.MergiInainte) :  #verific ca sunt in starea initiala
+            masina.stop()
+
+        if (DEBUG_ALL_DATA and not ESTE_PE_MASINA):
+            print("Diferenta intre Drumuri:"+str(DrumPrincipal.Centru-DrumSecundar.Centru))
+        if(abs(DrumPrincipal.Centru-DrumSecundar.Centru)>EroareCentrare):
+            print("Urmeaza o curba")
+            cv2.waitKey(0)
+    SectiunePrincipala.ObtineStructuri(lungimeCadru,binarization,LatimeCadru)
+    SectiuneSecundara.ObtineStructuri(lungimeCadru,binarization,LatimeCadru)
+    SectiunePrincipala.SetNumeBanda("Sect. Pp")
+    SectiuneSecundara.SetNumeBanda("Sect. Sec")
+
+    SectiunePrincipala.CalculDistantaBanda(lungimeCadru)
+    SectiuneSecundara.CalculDistantaBanda(lungimeCadru)
+
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    if not(ESTE_PE_MASINA):
+        cv2.putText(img, "FPS: " + str(fps), (10, 20),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.4, (50, 50, 50), 2)
+    else:
+        print("Frames per second using video.get(cv2.CAP_PROP_FPS) : {0}".format(fps))
 
     PutLines()
     ## Aici nu e ok, TODO
@@ -326,7 +405,7 @@ while (cap.isOpened()):
     else:
         ObiectBanda = OneLane(SectiunePrincipala, SectiuneSecundara)
 
-    if DEBUG_ALL_DATA:
+    if DEBUG_ALL_DATA and ESTE_PE_MASINA:
         print("Benzi gasite:" + str(SectiunePrincipala.NumarStructuri))
         print("\nCentre:\t" + str(SectiunePrincipala.centre))
         print("\nCentre2:\t" + str(SectiuneSecundara.centre))
@@ -334,8 +413,8 @@ while (cap.isOpened()):
         cv2.putText(img, "Benzi identificate: "+ str(SectiunePrincipala.NumarStructuri), (10, 460), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
 
     MijlocCamera = int(lungimeCadru / 2.0)
-    EroareCentrare = 50
-    SectiunePrincipala.CalculDistantaBanda()
+
+
 
         #END OF TODO DE refactoring
 
@@ -400,19 +479,22 @@ while (cap.isOpened()):
 
     ### END OF AFISARE
 
-    # print("Valoare Medie Benzi:"+str(np.average(DistanteBenzi)))
-    if(not ESTE_PE_MASINA):
+    if (not ESTE_PE_MASINA) :
+        cv2.putText(img, "Stare: " + str(masina.current_state.value), (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4,
+                    (250, 250, 250), 2)
+    else :
+        print(masina.current_state.value)
+
+    if (not ESTE_PE_MASINA) :
         cv2.imshow("Image", img)
         cv2.imshow("binarizare", binarization)
         cv2.waitKey(0)
-    #cv2.imshow("PERSPECTIVA NECALIBRATA", copie)
-    #cv2.imshow("PERSPECTIVA CALIBRATA", undist_copy)q
-
 
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
-    #if not ESTE_PE_MASINA:
-    #    time.sleep(1)
+
+
+
 
 # rawCapture.truncate(0)
 if ESTE_PE_MASINA:

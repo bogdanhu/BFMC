@@ -30,11 +30,7 @@ class DeplasareMasina(StateMachine):
         #cautam Drumul
 
 
-masina = DeplasareMasina()
-print(masina.current_state)
-print(masina.current_state == DeplasareMasina.initializare == masina.initializare)
-masina.PleacaDeLaStart()
-print(masina.current_state)
+
 #cautam stopul
     #masina.stop()
 #masina.PleacaDeLaStop()

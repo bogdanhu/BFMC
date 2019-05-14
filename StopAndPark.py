@@ -1,6 +1,12 @@
 import numpy as np
 import cv2
 
+class Indicator:
+    STOP = 1
+    PARCARE = 2
+    Eroare = 3
+
+
 font = cv2.FONT_HERSHEY_COMPLEX
 def stopOrPark(frame):
     #frame = cv2.resize(frame, None, fx=0.5, fy=0.6, interpolation=cv2.INTER_CUBIC)
@@ -50,7 +56,7 @@ def stopOrPark(frame):
             if counterRed > 1 and haveWhite is True:
                 cv2.drawContours(frame, [approx], 0, (0, 0, 0), 1)
                 cv2.imshow("ROSU", frame)
-                return True
+                return Indicator.STOP
 
     # ALBASTRU
     for cnt in contoursBlue:
@@ -68,4 +74,4 @@ def stopOrPark(frame):
                 cv2.drawContours(frame, [approx], 0, (0, 0, 0), 1)
                 cv2.imshow("BLUE", frame)
                 print(area)
-                return True
+                return Indicator.PARCARE
