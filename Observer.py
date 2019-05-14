@@ -8,11 +8,13 @@ class DeplasareMasina(StateMachine):
     CurbaDreapta = State('IaCurbaDreapta')
     ParcareLaterala= State('ParcheazaLaterala')
     PlecareDinParcare=State('PleacaDinParcare')
-
+    CurbaStangaDupaStopActiune=State('CurbaStangaDupaStop')
 
     PleacaDeLaStart = initializare.to(MergiInainte)
     stop = MergiInainte.to(Opreste)
     PleacaDeLaStop = Opreste.to(MergiInainte)
+    CurbaStangaDupaStop=Opreste.to(CurbaStangaDupaStopActiune)
+    MergiInainteDupaStop=CurbaStangaDupaStopActiune.to(MergiInainte)
     MergiLaDreapta=MergiInainte.to(CurbaDreapta)
     MergiInainteDupaCurba=CurbaDreapta.to(MergiInainte)
 

@@ -108,6 +108,7 @@ mijlocCalculat=0
 pasAdaptare = 0
 pozitieMijlocAnterior = -1
 global serialHandler
+counterStop=0
 
 if ESTE_PE_MASINA:
     serialHandler = SerialHandler.SerialHandler("/dev/ttyACM0")
@@ -324,7 +325,7 @@ while (cap.isOpened()):
 
 
     if (not ESTE_PE_MASINA):
-        LocatieDeInteres = 800  # 1450
+        LocatieDeInteres = 0  # 1450
     if counter < LocatieDeInteres:
         continue
     # for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
@@ -336,8 +337,17 @@ while (cap.isOpened()):
         masina.PleacaDinParcare()
         CounterFolositPentruAMasuraStarea=1
 
+
     if (CounterFolositPentruAMasuraStarea>50 and masina.current_state==masina.Opreste):#am pus un 50 aiurea
-        masina.PleacaDeLaStop()
+        if (counterStop == 1):
+            masina.CurbaStangaDupaStop()
+            CounterFolositPentruAMasuraStarea = 1 #aici ar fi mergi la stanga cat timp nu ai drum !
+        else:
+            masina.PleacaDeLaStop()
+            CounterFolositPentruAMasuraStarea = 0
+
+    if (CounterFolositPentruAMasuraStarea>50 and masina.current_state==masina.CurbaStangaDupaStopActiune):#am pus un 50 aiurea
+        masina.MergiInainteDupaStop()
         CounterFolositPentruAMasuraStarea=0
 
     if (CounterFolositPentruAMasuraStarea>50 and masina.current_state==masina.PlecareDinParcare):#am pus un 50 aiurea
@@ -349,6 +359,7 @@ while (cap.isOpened()):
         if AnalizaCadru==Indicator.STOP:
             print("avem stop")
             if (masina.current_state == masina.MergiInainte) :  # verific ca sunt in starea initiala
+                counterStop=counterStop+1
                 masina.stop()
                 CounterFolositPentruAMasuraStarea = 1
             else:
@@ -356,7 +367,7 @@ while (cap.isOpened()):
         elif AnalizaCadru==Indicator.PARCARE:
             print("avem parcare")
             if (masina.current_state == masina.MergiInainte) :  # verific ca sunt in starea initiala
-                if (counter>415): #TODO - de sters, pentru ca e doar temporar- implementare cand masina stare este MergiInainteDupaUturn
+                if (counter>1000): #TODO - de sters, pentru ca e doar temporar- implementare cand masina stare este MergiInainteDupaUturn
                     AMPARCAT = True
                     masina.Parcheaza()
                     CounterFolositPentruAMasuraStarea=1
