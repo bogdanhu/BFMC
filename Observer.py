@@ -1,4 +1,5 @@
 from statemachine import StateMachine, State
+#import statemachine
 #https://pypi.org/project/python-statemachine/
 
 class DeplasareMasina(StateMachine):

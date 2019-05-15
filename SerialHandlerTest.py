@@ -237,16 +237,15 @@ def main():
     serialHandler.startReadThread()
 #    line.Check()
     try:
-        print("Hello")
-        serialHandler.sendMove(20.0, 0.0)
+        serialHandler.sendPidActivation(False)
         ev1 = threading.Event()
-        time.sleep(2.0)
+        serialHandler.sendMove(0.2, 0.0)
     except Exception as e:
         print(e)
         pass
 
     time.sleep(0.5)
-    serialHandler.sendPidActivation(False)
+
     serialHandler.close()
 
 #mergi in  fata, #ia-o in stanga sharp, #ia-o in dreapta, #inainte

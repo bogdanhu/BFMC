@@ -13,6 +13,7 @@ class Banda:
         self.DistantaBenziVector = np.zeros(0)
         self.MedDistanta = 0
         self.mijlocCalculat = 0
+        self.DistantaBandaCalculata = 0
         self.nume = "Neinitializat"
 
     def SetNumeBanda(self, NumeBanda):

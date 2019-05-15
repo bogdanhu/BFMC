@@ -21,7 +21,12 @@ mijlocCalculat=0
 pasAdaptare = 0
 pozitieMijlocAnterior = -1
 counter = 0
-
+###
+analiza = np.zeros(0)
+loopCounter = 0
+CounterUltimaBandaGasita = 0
+CounterLipsaBandaGasita = 0
+###
 global serialHandler
 if ESTE_PE_MASINA:
     serialHandler = SerialHandler.SerialHandler("/dev/ttyACM0")
@@ -108,6 +113,9 @@ class OneLane:
         self.Sectiune = Sectiune
         self.CentruImaginar = 0
         self.Referinta = 0
+        ###
+        self.DistantaBandaCalculata = 0
+        ###
         global MedDistanta
         if 'MedDistanta' not in globals():
             MedDistanta=350
@@ -116,6 +124,9 @@ class OneLane:
             if self.Sectiune.centre < lungimeCadru / 2:
                 self.Referinta = self.Sectiune.centre[0]
                 self.CentruImaginar = self.Referinta + (MedDistanta / 2)
+                ###
+                self.DistantaBandaCalculata = ((self.Sectiune.centre + self.CentruImaginar) / 2)
+                ###
                 print("Avem o banda pe stanga")
                 print("Nu exista banda pe partea dreapta, pozitia ei aproximata este " + str(self.CentruImaginar))
                 cv2.putText(img, "Pozitie Relativa Mijloc Imaginar: " + str(self.CentruImaginar), (10, 420),
@@ -123,6 +134,10 @@ class OneLane:
             else:
                 self.Referinta = self.Sectiune.centre[0]
                 self.CentruImaginar = self.Referinta - (MedDistanta / 2)
+                ###
+                self.DistantaBandaCalculata = ((self.Sectiune.centre + self.CentruImaginar) / 2)
+                print("@@@@@@@@@@@@@@@@@@@@@ " + str(self.DistantaBandaCalculata))
+                ###
                 print("Avem o banda pe dreapta")
                 print("Nu exista banda pe partea stanga, pozitia ei aproximata este " + str(self.CentruImaginar))
                 cv2.putText(img, "Pozitie Relativa Mijloc Imaginar: " + str(self.CentruImaginar), (10, 420), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
@@ -150,6 +165,8 @@ while (cap.isOpened()):
         break
     img = frame
     counter = counter + 1
+    if counter < 900:
+        continue
     if not ESTE_PE_MASINA:
         cv2.putText(img, "Cadrul: " + str(counter), (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.4,
                     (250, 250, 250), 2)
@@ -165,6 +182,33 @@ while (cap.isOpened()):
     Sectiune.SetNumeBanda("Sect. Pp")
     Sectiune.CalculDistantaBanda(lungimeCadru)
     fps = cap.get(cv2.CAP_PROP_FPS)
+
+    #### DETECTIE LINIE DISCONTINUA
+    if Sectiune.centre.size == 2:
+        DistantaDintreBenzi = Sectiune.DistantaBandaFrame
+        avemBanda = True
+    elif Sectiune.centre.size == 0:
+        DistantaDintreBenzi = 0
+        avemBanda = False
+
+    if Sectiune.centre.size == 2 or Sectiune.centre.size == 0:
+        analiza = (DistantaDintreBenzi, counter)
+        print("Distanta dintre benzi: " + str(analiza[0]) + ", la cadrul " + str(analiza[1]))
+        #analiza = np.append(analiza, x)
+        if analiza[0] > 0:
+            avemBanda = True
+            CounterUltimaBandaGasita = analiza[1]
+        else:
+            if avemBanda:
+                avemBanda = False
+                CounterLipsaBandaGasita = analiza[1]
+            else:
+                CounterLipsaBandaGasita = analiza[1]
+                if CounterLipsaBandaGasita - CounterUltimaBandaGasita > 2:
+                    print("--------->Linie discontinua!!<---------")
+
+    ####
+
     if not ESTE_PE_MASINA:
         cv2.putText(img, "FPS: " + str(fps), (10, 20),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.4, (50, 50, 50), 2)
@@ -179,11 +223,11 @@ while (cap.isOpened()):
         del ObiectBanda
     except:
         pass
-
     if Sectiune.centre.size == 2:
         ObiectDrum = TwoLanes(Sectiune)
     else:
         ObiectBanda = OneLane(Sectiune)
+
 
     if DEBUG_ALL_DATA and ESTE_PE_MASINA:
         print("Benzi gasite:" + str(Sectiune.NumarStructuri))
