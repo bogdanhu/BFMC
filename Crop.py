@@ -4,7 +4,7 @@ from ShapeDetection import ShapeDetector
 import imutils
 import os
 
-cap = cv2.VideoCapture('camera.avi')
+cap = cv2.VideoCapture('cameraG.avi')
 os.system('cls' if os.name == 'nt' else 'clear')
 ExistaBandaDiscontinua=False
 

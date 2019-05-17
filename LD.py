@@ -7,6 +7,7 @@ import time
 import cv2
 import numpy as np
 from Banda import Banda
+from Observer import DeplasareMasina
 from StopAndPark import stopOrPark
 
 global serialHandler
@@ -14,6 +15,7 @@ DEBUG_ALL_DATA = True
 ESTE_PE_MASINA = True
 VIDEO_RECORD = True
 
+## VARIABILE
 cap = cv2.VideoCapture(0)
 CentruImaginar = 0
 EroareCentrare = 30
@@ -22,13 +24,9 @@ mijlocCalculat=0
 pasAdaptare = 0
 pozitieMijlocAnterior = -1
 counter = 0
+masina = DeplasareMasina()
+## END OF VARIABLE
 
-# ###
-# analiza = np.zeros(0)
-# loopCounter = 0
-# CounterUltimaBandaGasita = 0
-# CounterLipsaBandaGasita = 0
-# ###
 global serialHandler
 
 if VIDEO_RECORD:
@@ -114,9 +112,6 @@ class OneLane:
         self.Sectiune = Sectiune
         self.CentruImaginar = 0
         self.Referinta = 0
-        # ###
-        # self.DistantaBandaCalculata = 0
-        # ###
         global MedDistanta
         if 'MedDistanta' not in globals():
             MedDistanta = 350
@@ -125,9 +120,7 @@ class OneLane:
             if self.Sectiune.centre < lungimeCadru / 2:
                 self.Referinta = self.Sectiune.centre[0]
                 self.CentruImaginar = self.Referinta + (MedDistanta / 2)
-                # ###
-                # self.DistantaBandaCalculata = ((self.Sectiune.centre + self.CentruImaginar) / 2)
-                # ###
+
                 print("Avem o banda pe stanga")
                 print("Nu exista banda pe partea dreapta, pozitia ei aproximata este " + str(self.CentruImaginar))
                 cv2.putText(img, "Pozitie Relativa Mijloc Imaginar: " + str(self.CentruImaginar), (10, 420),
@@ -135,10 +128,6 @@ class OneLane:
             else:
                 self.Referinta = self.Sectiune.centre[0]
                 self.CentruImaginar = self.Referinta - (MedDistanta / 2)
-                # ###
-                # self.DistantaBandaCalculata = ((self.Sectiune.centre + self.CentruImaginar) / 2)
-                # print("@@@@@@@@@@@@@@@@@@@@@ " + str(self.DistantaBandaCalculata))
-                # ###
                 print("Avem o banda pe dreapta")
                 print("Nu exista banda pe partea stanga, pozitia ei aproximata este " + str(self.CentruImaginar))
 
@@ -166,10 +155,9 @@ while (cap.isOpened()):
     if ret is False:
         break
     img = frame
-    # if stopOrPark(frame, False) == 1:
-    #     print("STOP")
-    #     serialHandler.sendBrake(0)
-
+    #if stopOrPark(img, False) == 1:
+    #    print("STOP")
+    #    serialHandler.sendBrake(0)
     if VIDEO_RECORD:
         out.write(frame)
     counter = counter + 1
@@ -193,31 +181,6 @@ while (cap.isOpened()):
     Sectiune.CalculDistantaBanda(lungimeCadru)
     fps = cap.get(cv2.CAP_PROP_FPS)
 
-    # #### DETECTIE LINIE DISCONTINUA
-    # if Sectiune.centre.size == 2:
-    #     DistantaDintreBenzi = Sectiune.DistantaBandaFrame
-    #     avemBanda = True
-    # elif Sectiune.centre.size == 0:
-    #     DistantaDintreBenzi = 0
-    #     avemBanda = False
-    #
-    # if Sectiune.centre.size == 2 or Sectiune.centre.size == 0:
-    #     analiza = (DistantaDintreBenzi, counter)
-    #     print("Distanta dintre benzi: " + str(analiza[0]) + ", la cadrul " + str(analiza[1]))
-    #     #analiza = np.append(analiza, x)
-    #     if analiza[0] > 0:
-    #         avemBanda = True
-    #         CounterUltimaBandaGasita = analiza[1]
-    #     else:
-    #         if avemBanda:
-    #             avemBanda = False
-    #             CounterLipsaBandaGasita = analiza[1]
-    #         else:
-    #             CounterLipsaBandaGasita = analiza[1]
-    #             if CounterLipsaBandaGasita - CounterUltimaBandaGasita > 2:
-    #                 print("--------->Linie discontinua!!<---------")
-    #
-    # ####
 
     if not ESTE_PE_MASINA:
         cv2.putText(img, "FPS: " + str(fps), (10, 20),
@@ -255,27 +218,27 @@ while (cap.isOpened()):
         MijlocGeneric = ObiectBanda.CentruImaginar
 
     try:
-        serialHandler.sendPidActivation(False)
+        serialHandler.sendPidActivation(True)
         DiferentaFataDeMijloc = MijlocCamera - MijlocGeneric
         if  DiferentaFataDeMijloc > EroareCentrare:
             pasAdaptare = pasAdaptare - 2
             if pasAdaptare < -22:
                 pasAdaptare = -20
             if ESTE_PE_MASINA:
-                serialHandler.sendMove(20, 2 + pasAdaptare)
+                serialHandler.sendMove(0.2, 2 + pasAdaptare)
                 if DEBUG_ALL_DATA:
                     print("<<<<")
                     print("Unghi Adaptat pentru stanga: " + str(pasAdaptare))
         else:
             if -EroareCentrare < DiferentaFataDeMijloc < EroareCentrare:
                 if ESTE_PE_MASINA:
-                    serialHandler.sendMove(20, 0.0)
+                    serialHandler.sendMove(0.2, 0.0)
                     if DEBUG_ALL_DATA:
                         print("suntem pe centru")
                 pasAdaptare = 0
             else:
                 if ESTE_PE_MASINA:
-                    serialHandler.sendMove(20, 2 + pasAdaptare)
+                    serialHandler.sendMove(0.2, 2 + pasAdaptare)
                     if DEBUG_ALL_DATA:
                         print(">>>>>>")
                         print("Unghi Adaptat pentru  dreapta:\t" + str(pasAdaptare))
@@ -292,6 +255,11 @@ while (cap.isOpened()):
             ObiectDrum.draw()
         else:
             ObiectBanda.draw()
+    if (not ESTE_PE_MASINA) :
+        cv2.putText(img, "Stare: " + str(masina.current_state.value), (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4,
+                    (250, 250, 250), 2)
+    else :
+        print(masina.current_state.value)
 
     if not ESTE_PE_MASINA:
         cv2.imshow("Image", img)

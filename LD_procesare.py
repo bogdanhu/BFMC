@@ -7,36 +7,35 @@ import time
 import cv2
 import numpy as np
 from Banda import Banda
+from Observer import DeplasareMasina
+#from StopAndPark import stopOrPark
 
 global serialHandler
 DEBUG_ALL_DATA = True
 ESTE_PE_MASINA = False
-DISTANTABANDACT = 350
+VIDEO_RECORD = False
 
-cap = cv2.VideoCapture('demo.avi')
+## VARIABILE
+cap = cv2.VideoCapture('cameraE.avi')
 CentruImaginar = 0
-EroareCentrare = 50
+EroareCentrare = 30
 DistanteBenzi = np.zeros(0)
 mijlocCalculat=0
 pasAdaptare = 0
 pozitieMijlocAnterior = -1
 counter = 0
-###
-analiza = np.zeros(0)
-loopCounter = 0
-CounterUltimaBandaGasita = 0
-CounterLipsaBandaGasita = 0
-###
+masina = DeplasareMasina()
+## END OF VARIABLE
+
 global serialHandler
+
+if VIDEO_RECORD:
+    fourcc = cv2.VideoWriter_fourcc(*'DIVX')
+    out = cv2.VideoWriter('camera.avi', fourcc, 20,(640, 480))
+
 if ESTE_PE_MASINA:
     serialHandler = SerialHandler.SerialHandler("/dev/ttyACM0")
     serialHandler.startReadThread()
-
-class Directie:
-    STANGA = -1
-    CENTRU = 0
-    DREAPTA = -1
-
 
 class Indicator:
     STOP = 1
@@ -113,9 +112,6 @@ class OneLane:
         self.Sectiune = Sectiune
         self.CentruImaginar = 0
         self.Referinta = 0
-        ###
-        self.DistantaBandaCalculata = 0
-        ###
         global MedDistanta
         if 'MedDistanta' not in globals():
             MedDistanta=350
@@ -124,9 +120,7 @@ class OneLane:
             if self.Sectiune.centre < lungimeCadru / 2:
                 self.Referinta = self.Sectiune.centre[0]
                 self.CentruImaginar = self.Referinta + (MedDistanta / 2)
-                ###
-                self.DistantaBandaCalculata = ((self.Sectiune.centre + self.CentruImaginar) / 2)
-                ###
+
                 print("Avem o banda pe stanga")
                 print("Nu exista banda pe partea dreapta, pozitia ei aproximata este " + str(self.CentruImaginar))
                 cv2.putText(img, "Pozitie Relativa Mijloc Imaginar: " + str(self.CentruImaginar), (10, 420),
@@ -134,10 +128,6 @@ class OneLane:
             else:
                 self.Referinta = self.Sectiune.centre[0]
                 self.CentruImaginar = self.Referinta - (MedDistanta / 2)
-                ###
-                self.DistantaBandaCalculata = ((self.Sectiune.centre + self.CentruImaginar) / 2)
-                print("@@@@@@@@@@@@@@@@@@@@@ " + str(self.DistantaBandaCalculata))
-                ###
                 print("Avem o banda pe dreapta")
                 print("Nu exista banda pe partea stanga, pozitia ei aproximata este " + str(self.CentruImaginar))
                 cv2.putText(img, "Pozitie Relativa Mijloc Imaginar: " + str(self.CentruImaginar), (10, 420), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
@@ -164,7 +154,12 @@ while (cap.isOpened()):
     if ret is False:
         break
     img = frame
+    # if stopOrPark(img, False) == 1:
+    #    print("STOP")
+    #    serialHandler.sendBrake(0)
     counter = counter + 1
+    if VIDEO_RECORD:
+        out.write(frame)
     if not ESTE_PE_MASINA:
         cv2.putText(img, "Cadrul: " + str(counter), (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.4,
                     (250, 250, 250), 2)
@@ -181,38 +176,14 @@ while (cap.isOpened()):
     Sectiune.CalculDistantaBanda(lungimeCadru)
     fps = cap.get(cv2.CAP_PROP_FPS)
 
-    #### DETECTIE LINIE DISCONTINUA
-    if Sectiune.centre.size == 2:
-        DistantaDintreBenzi = Sectiune.DistantaBandaFrame
-        avemBanda = True
-    elif Sectiune.centre.size == 0:
-        DistantaDintreBenzi = 0
-        avemBanda = False
-
-    if Sectiune.centre.size == 2 or Sectiune.centre.size == 0:
-        analiza = (DistantaDintreBenzi, counter)
-        print("Distanta dintre benzi: " + str(analiza[0]) + ", la cadrul " + str(analiza[1]))
-        #analiza = np.append(analiza, x)
-        if analiza[0] > 0:
-            avemBanda = True
-            CounterUltimaBandaGasita = analiza[1]
-        else:
-            if avemBanda:
-                avemBanda = False
-                CounterLipsaBandaGasita = analiza[1]
-            else:
-                CounterLipsaBandaGasita = analiza[1]
-                if CounterLipsaBandaGasita - CounterUltimaBandaGasita > 2:
-                    print("--------->Linie discontinua!!<---------")
-
-    ####
 
     if not ESTE_PE_MASINA:
         cv2.putText(img, "FPS: " + str(fps), (10, 20),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.4, (50, 50, 50), 2)
     else:
         print("Frames per second using video.get(cv2.CAP_PROP_FPS) : {0}".format(fps))
-    PutLines()
+    if not ESTE_PE_MASINA:
+        PutLines()
     try:
         del ObiectDrum
     except:
@@ -245,10 +216,9 @@ while (cap.isOpened()):
     try:
         DiferentaFataDeMijloc = MijlocCamera - MijlocGeneric
         if  DiferentaFataDeMijloc > EroareCentrare:
-            DirectieIdentificata = Directie.STANGA # TODO poate facem asta cu verificare
             pasAdaptare = pasAdaptare - 5
-            if (pasAdaptare<(-23)):
-                pasAdaptare=-22
+            if (pasAdaptare<(-22)):
+                pasAdaptare=-20
             if ESTE_PE_MASINA:
                 serialHandler.sendMove(20.0, pasAdaptare)
                 print("<<<<")
@@ -258,13 +228,11 @@ while (cap.isOpened()):
                             cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
         else:
             if -EroareCentrare < DiferentaFataDeMijloc < EroareCentrare:
-                DirectieIdentificata = Directie.CENTRU #TODO
                 if ESTE_PE_MASINA:
                     serialHandler.sendMove(20.0, 0.0)
                     print("suntem pe centru")
                 pasAdaptare = 0
             else:
-                DirectieIdentificata = Directie.DREAPTA #TODO
                 if ESTE_PE_MASINA:
                     serialHandler.sendMove(20.0, 5.0 + pasAdaptare)
                     print(">>>>>>")
@@ -273,8 +241,8 @@ while (cap.isOpened()):
                     cv2.putText(img, "O luam la dreapta", (10, 380),
                                 cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
                 pasAdaptare = pasAdaptare + 5
-                if (pasAdaptare > (23)):
-                    pasAdaptare = 22
+                if (pasAdaptare > (22)):
+                    pasAdaptare = 20
 
     except Exception as e:
         print(e)
@@ -286,12 +254,22 @@ while (cap.isOpened()):
         ObiectBanda.draw()
 
     if (not ESTE_PE_MASINA) :
+        cv2.putText(img, "Stare: " + str(masina.current_state.value), (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4,
+                    (250, 250, 250), 2)
+    else :
+        print(masina.current_state.value)
+
+    if (not ESTE_PE_MASINA) :
         cv2.imshow("Image", img)
         cv2.imshow("binarizare", binarization)
         cv2.waitKey(1)
+        time.sleep(0.05)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
+    #if stopOrPark(img, False) == 1:
+    #    print("STOP")
+    #    serialHandler.sendBrake(0)
 if ESTE_PE_MASINA:
     serialHandler.sendPidActivation(False)
     serialHandler.close()

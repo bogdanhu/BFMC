@@ -1,5 +1,10 @@
-import numpy as np
 import cv2
+import numpy as np
+
+cap = cv2.VideoCapture('cameraG.avi')
+
+
+import numpy as np
 
 class Indicator:
     STOP = 1
@@ -38,9 +43,9 @@ def stopOrPark(frame,AMPARCAT=False):
 
     kernelBlue = np.ones((1, 1), np.uint8)
     maskBlue = cv2.erode(maskBlue, kernelBlue)
-    contoursRed, none = cv2.findContours(maskRed, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contoursRed = cv2.findContours(maskRed, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
-    contoursWhite, none = cv2.findContours(maskWhite, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    contoursWhite = cv2.findContours(maskWhite, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     for cnt in contoursRed:
         haveWhite = False
@@ -79,3 +84,11 @@ def stopOrPark(frame,AMPARCAT=False):
                 cv2.imshow("BLUE", frame)
                 print(area)
                 return Indicator.PARCARE
+
+while (cap.isOpened()):
+    ret, frame = cap.read()
+    if ret is False:
+        break
+    img = frame
+    stopOrPark(frame)
+    cv2.waitKey(1)

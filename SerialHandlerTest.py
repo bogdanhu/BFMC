@@ -237,9 +237,27 @@ def main():
     serialHandler.startReadThread()
 #    line.Check()
     try:
-        serialHandler.sendPidActivation(False)
+        ## PARCARE STARE
+        serialHandler.sendPidActivation(True)
         ev1 = threading.Event()
-        serialHandler.sendMove(0.2, 0.0)
+        serialHandler.sendMove(-0.2, 22.0)
+        time.sleep(2.7)
+        serialHandler.sendMove(-0.2, -22.0)
+        time.sleep(2.5)
+        serialHandler.sendBrake(0.0)
+        time.sleep(2.5)
+        ### END OF PARCARE
+
+        ### START PLECARE DIN PARCARE
+        serialHandler.sendMove(0.2, -22.0)
+        time.sleep(2.2)
+        serialHandler.sendMove(0.2, 22.0)
+        time.sleep(2.7)
+
+        ##END OF PLECARE
+
+
+
     except Exception as e:
         print(e)
         pass
