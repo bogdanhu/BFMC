@@ -74,15 +74,19 @@ def stopOrPark(frame):
                     AmParcat = True
                     print(AmParcat)
 
-cap = cv2.VideoCapture('cameraE.avi')
-counter = 0
-while (cap.isOpened()):
-    counter = counter+1
-    ret, frame = cap.read()
-    if counter < 1500:
-        continue
-    AmParcat = False
 
-    stopOrPark(frame)
-    cv2.imshow("IMG", frame)
-    cv2.waitKey(0)
+if __name__=="__main__":
+    cap = cv2.VideoCapture('cameraE.avi')
+    counter = 0
+    while (cap.isOpened()) :
+        counter = counter + 1
+        ret, frame = cap.read()
+        if counter < 1500 :
+            continue
+        AmParcat = False
+
+        stopOrPark(frame)
+        cv2.imshow("IMG", frame)
+        cv2.waitKey(0)
+
+
