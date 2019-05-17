@@ -165,8 +165,6 @@ while (cap.isOpened()):
         break
     img = frame
     counter = counter + 1
-    if counter < 900:
-        continue
     if not ESTE_PE_MASINA:
         cv2.putText(img, "Cadrul: " + str(counter), (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.4,
                     (250, 250, 250), 2)
@@ -290,7 +288,7 @@ while (cap.isOpened()):
     if (not ESTE_PE_MASINA) :
         cv2.imshow("Image", img)
         cv2.imshow("binarizare", binarization)
-        cv2.waitKey(0)
+        cv2.waitKey(1)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 
