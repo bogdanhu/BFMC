@@ -3,9 +3,8 @@ import cv2
 
 font = cv2.FONT_HERSHEY_COMPLEX
 
-def stopOrPark(frame):
+def stopOrPark(frame,AmParcat): #return AmSTOP,AmParcat
     #frame = cv2.resize(frame, None, fx=0.5, fy=0.6, interpolation=cv2.INTER_CUBIC)
-    global AmParcat
     frame = frame[0:350, 320:640]
     hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
 
@@ -45,8 +44,8 @@ def stopOrPark(frame):
                 cv2.drawContours(frame, [approx], 0, (0, 0, 0), 1)
                 cv2.imshow("ROSU", frame)
                 print(area)
-                return True
-
+                return True,False
+    ## TODO: verificam orientarea pe GPS
     if not AmParcat:
         # ALBASTRU
         lower_blue = np.array([90, 80, 50])
@@ -71,21 +70,27 @@ def stopOrPark(frame):
                     cv2.drawContours(frame, [approx], 0, (0, 0, 0), 1)
                     cv2.imshow("BLUE", frame)
                     print(area)
-                    AmParcat = True
-                    print(AmParcat)
+                    AmParcat = False,True
+                    return AmParcat
+    return False,False
+
+
 
 
 if __name__=="__main__":
     cap = cv2.VideoCapture('cameraE.avi')
     counter = 0
+    PARCAREDEJA=False
     while (cap.isOpened()) :
         counter = counter + 1
         ret, frame = cap.read()
         if counter < 1500 :
             continue
-        AmParcat = False
-
-        stopOrPark(frame)
+        EsteStop,EsteParcare=stopOrPark(frame,PARCAREDEJA)
+        if EsteParcare:
+            PARCAREDEJA=True
+        STARE= (EsteStop,EsteParcare)
+        print("La cadrul avem starea "+str(PARCAREDEJA))
         cv2.imshow("IMG", frame)
         cv2.waitKey(0)
 
