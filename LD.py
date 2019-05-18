@@ -20,6 +20,8 @@ AMPARCAT=False
 cap = cv2.VideoCapture(0)
 CentruImaginar = 0
 EroareCentrare = 30
+pasAdaptareInvatare=2
+vitezaInvatare=0.2
 DistanteBenzi = np.zeros(0)
 mijlocCalculat=0
 pasAdaptare = 0
@@ -29,6 +31,7 @@ masina = DeplasareMasina()
 ## END OF VARIABLE
 
 global serialHandler
+
 
 if VIDEO_RECORD:
     fourcc = cv2.VideoWriter_fourcc(*'DIVX')
@@ -131,13 +134,15 @@ def PutLines():
     cv2.line(img, (0, int(LatimeCadru * 2.0 / 3)), (lungimeCadru, Sectiune.inaltimeSectiune), (255, 255, 0), 2)
     cv2.line(img, (int(lungimeCadru / 2), 0), (int(lungimeCadru / 2), LatimeCadru), (255, 255, 255), 2)
 
+counterStop=0
+
 while (cap.isOpened()):
     ret, frame = cap.read()
     if ret is False:
         break
     img = frame
 
-    #EsteStop,EsteParcare = stopOrPark(frame, AMPARCAT)
+    #EsteStop,EsteParcare = stopOrPark(frame, AMPARCAT) #TODO
     EsteStop,EsteParcare=False,False
     if VIDEO_RECORD:
         out.write(frame)
@@ -225,28 +230,28 @@ while (cap.isOpened()):
         serialHandler.sendPidActivation(True)
         DiferentaFataDeMijloc = MijlocCamera - MijlocGeneric
         if  DiferentaFataDeMijloc > EroareCentrare:
-            pasAdaptare = pasAdaptare - 2
+            pasAdaptare = pasAdaptare - pasAdaptareInvatare
             if pasAdaptare < -22:
                 pasAdaptare = -20
             if ESTE_PE_MASINA:
-                serialHandler.sendMove(0.2, 2 + pasAdaptare)
+                serialHandler.sendMove(vitezaInvatare, pasAdaptareInvatare + pasAdaptare)
                 if DEBUG_ALL_DATA:
                     print("<<<<")
-                    print("Unghi Adaptat pentru stanga: " + str(pasAdaptare))
+                    print("Unghi Adaptat pentru stanga: " + str(pasAdaptare))#
         else:
             if -EroareCentrare < DiferentaFataDeMijloc < EroareCentrare:
                 if ESTE_PE_MASINA:
-                    serialHandler.sendMove(0.2, 0.0)
+                    serialHandler.sendMove(vitezaInvatare, 0.0)
                     if DEBUG_ALL_DATA:
                         print("suntem pe centru")
                 pasAdaptare = 0
             else:
                 if ESTE_PE_MASINA:
-                    serialHandler.sendMove(0.2, 2 + pasAdaptare)
+                    serialHandler.sendMove(vitezaInvatare, pasAdaptareInvatare + pasAdaptare)
                     if DEBUG_ALL_DATA:
                         print(">>>>>>")
                         print("Unghi Adaptat pentru  dreapta:\t" + str(pasAdaptare))
-                pasAdaptare = pasAdaptare + 2
+                pasAdaptare = pasAdaptare + pasAdaptareInvatare
                 if pasAdaptare > 22:
                     pasAdaptare = 20
 

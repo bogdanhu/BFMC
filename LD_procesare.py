@@ -17,7 +17,7 @@ VIDEO_RECORD = False
 AMPARCAT=False
 
 ## VARIABILE
-cap = cv2.VideoCapture('cameraJ-noaptea.avi')
+cap = cv2.VideoCapture('camera.avi')
 CentruImaginar = 0
 EroareCentrare = 30
 DistanteBenzi = np.zeros(0)
@@ -227,6 +227,7 @@ while (cap.isOpened()):
         cv2.putText(img, "Benzi identificate: "+ str(Sectiune.NumarStructuri), (10, 460), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 255, 255), 1)
 
     if mijlocCalculat is  None:
+        print()
         continue
 
     if 'ObiectDrum' in locals() :
