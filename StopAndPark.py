@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import imutils
 
 font = cv2.FONT_HERSHEY_COMPLEX
 
@@ -24,9 +25,14 @@ def stopOrPark(frame,AmParcat): #return AmSTOP,AmParcat
     lower_white = np.array([0, 0, 0])
     upper_white = np.array([0, 0, 255])
     maskWhite = cv2.inRange(hsv, lower_white, upper_white)
-
-    contoursRed, none = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-    contoursWhite, none = cv2.findContours(maskWhite, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    if imutils.is_cv3():
+        imagex,contoursRed, none = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    else:
+        contoursRed, none = cv2.findContours(mask, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    if imutils.is_cv3() :
+        imagex,contoursWhite, none = cv2.findContours(maskWhite, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    else:
+        contoursWhite, none = cv2.findContours(maskWhite, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
     counterRed = 0
     for cnt in contoursRed:
@@ -54,7 +60,13 @@ def stopOrPark(frame,AmParcat): #return AmSTOP,AmParcat
 
         kernelBlue = np.ones((1, 1), np.uint8)#
         counterBlue = 0
-        contoursBlue, none = cv2.findContours(maskBlue, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        if imutils.is_cv3() :
+            nonex,contoursBlue, none = cv2.findContours(maskBlue, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        else :
+            contoursBlue, none = cv2.findContours(maskBlue, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+
+
         for cnt in contoursBlue:
             haveWhite = False
             area = cv2.contourArea(cnt)
