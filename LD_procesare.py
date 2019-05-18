@@ -8,15 +8,16 @@ import cv2
 import numpy as np
 from Banda import Banda
 from Observer import DeplasareMasina
-#from StopAndPark import stopOrPark
+from StopAndPark import stopOrPark
 
 global serialHandler
-DEBUG_ALL_DATA = True
+DEBUG_ALL_DATA = False
 ESTE_PE_MASINA = False
 VIDEO_RECORD = False
+AMPARCAT=False
 
 ## VARIABILE
-cap = cv2.VideoCapture('cameraE.avi')
+cap = cv2.VideoCapture('cameraJ-noaptea.avi')
 CentruImaginar = 0
 EroareCentrare = 30
 DistanteBenzi = np.zeros(0)
@@ -31,7 +32,7 @@ global serialHandler
 
 if VIDEO_RECORD:
     fourcc = cv2.VideoWriter_fourcc(*'DIVX')
-    out = cv2.VideoWriter('camera.avi', fourcc, 20,(640, 480))
+    out = cv2.VideoWriter('cameraJ.avi', fourcc, 20,(640, 480))
 
 if ESTE_PE_MASINA:
     serialHandler = SerialHandler.SerialHandler("/dev/ttyACM0")
@@ -73,8 +74,6 @@ class TwoLanes:
         self.MedDistanta=0
     def draw(self):
         global DiferentaFataDeMijloc
-        if self.Sectiune.centre.size == 2:
-            print("BINE")
              #  DE REVIZUIT 1)
 
             #cv2.rectangle(img, (int(SectiuneSecundara.centre[0] - 20), int(lungimeCadru * 2.0 / 3)),
@@ -149,20 +148,44 @@ def PutLines():
     cv2.line(img, (0, int(LatimeCadru * 2.0 / 3)), (lungimeCadru, Sectiune.inaltimeSectiune), (255, 255, 0), 2)
     cv2.line(img, (int(lungimeCadru / 2), 0), (int(lungimeCadru / 2), LatimeCadru), (255, 255, 255), 2)
 
+
+counterStop=0
+
 while (cap.isOpened()):
     ret, frame = cap.read()
     if ret is False:
         break
     img = frame
-    # if stopOrPark(img, False) == 1:
-    #    print("STOP")
-    #    serialHandler.sendBrake(0)
+
+    EsteStop,EsteParcare = stopOrPark(frame, AMPARCAT)
+
     counter = counter + 1
+    if counter < 5 :
+        continue
     if VIDEO_RECORD:
         out.write(frame)
     if not ESTE_PE_MASINA:
         cv2.putText(img, "Cadrul: " + str(counter), (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.4,
                     (250, 250, 250), 2)
+
+    if EsteStop :
+        print("avem stop")
+        print(str(masina.current_state))
+        if (masina.current_state == masina.initializare) :  # verific ca sunt in starea initiala
+            counterStop = counterStop + 1
+            masina.stoptodo()
+            CounterFolositPentruAMasuraStarea = 1
+        else :
+            print("dar nu sunt in starea de mers")
+    if EsteParcare:
+        print("avem parcare")
+        if (masina.current_state == masina.initializare) :  # verific ca sunt in starea initial
+                AMPARCAT = True
+                masina.Parcheaza()
+                CounterFolositPentruAMasuraStarea = 1
+        else :
+            print("dar nu sunt in starea de mers")
+
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     ret, binarization = cv2.threshold(gray, 190, 255, cv2.THRESH_BINARY)
     LatimeCadru, lungimeCadru, _ = frame.shape
@@ -197,7 +220,6 @@ while (cap.isOpened()):
     else:
         ObiectBanda = OneLane(Sectiune)
 
-
     if DEBUG_ALL_DATA and ESTE_PE_MASINA:
         print("Benzi gasite:" + str(Sectiune.NumarStructuri))
         print("\nCentre:\t" + str(Sectiune.centre))
@@ -213,14 +235,17 @@ while (cap.isOpened()):
     else:
         MijlocGeneric = ObiectBanda.CentruImaginar
 
+
+
     try:
+
         DiferentaFataDeMijloc = MijlocCamera - MijlocGeneric
         if  DiferentaFataDeMijloc > EroareCentrare:
-            pasAdaptare = pasAdaptare - 5
+            pasAdaptare = pasAdaptare - 2
             if (pasAdaptare<(-22)):
                 pasAdaptare=-20
             if ESTE_PE_MASINA:
-                serialHandler.sendMove(20.0, pasAdaptare)
+                serialHandler.sendMove(0.20, pasAdaptare)
                 print("<<<<")
                 print("Unghi Adaptat pentru stanga: " + str(pasAdaptare))
             else:
@@ -229,12 +254,12 @@ while (cap.isOpened()):
         else:
             if -EroareCentrare < DiferentaFataDeMijloc < EroareCentrare:
                 if ESTE_PE_MASINA:
-                    serialHandler.sendMove(20.0, 0.0)
+                    serialHandler.sendMove(0.20, 0.0)
                     print("suntem pe centru")
                 pasAdaptare = 0
             else:
                 if ESTE_PE_MASINA:
-                    serialHandler.sendMove(20.0, 5.0 + pasAdaptare)
+                    serialHandler.sendMove(0.20, 2.0 + pasAdaptare)
                     print(">>>>>>")
                     print("Unghi Adaptat pentru dreapta:\t" + str(pasAdaptare))
                 else:
@@ -248,6 +273,7 @@ while (cap.isOpened()):
         print(e)
         pass
 
+
     if Sectiune.centre.size == 2:
         ObiectDrum.draw()
     else:
@@ -258,12 +284,11 @@ while (cap.isOpened()):
                     (250, 250, 250), 2)
     else :
         print(masina.current_state.value)
-
     if (not ESTE_PE_MASINA) :
         cv2.imshow("Image", img)
         cv2.imshow("binarizare", binarization)
-        cv2.waitKey(1)
-        time.sleep(0.05)
+        cv2.waitKey(0)
+        time.sleep(0.5)
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
 

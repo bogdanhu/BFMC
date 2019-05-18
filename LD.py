@@ -14,6 +14,7 @@ global serialHandler
 DEBUG_ALL_DATA = True
 ESTE_PE_MASINA = True
 VIDEO_RECORD = True
+AMPARCAT=False
 
 ## VARIABILE
 cap = cv2.VideoCapture(0)
@@ -71,26 +72,6 @@ class TwoLanes:
     def __init__(self, Sectiune):
         self.Sectiune = Sectiune
         self.MedDistanta = 0
-    def draw(self):
-        global DiferentaFataDeMijloc
-        if self.Sectiune.centre.size == 2:
-            print("BINE")
-             #  DE REVIZUIT 1)
-
-            #cv2.rectangle(img, (int(SectiuneSecundara.centre[0] - 20), int(lungimeCadru * 2.0 / 3)),
-
-             #             (int(SectiuneSecundara.centre[1] + 20), int(lungimeCadru * 2.0 / 3)), (0, 0, 255), 5,
-
-             #             lineType=8)
-        for centru in self.Sectiune.centre:
-            cv2.putText(img, str(centru), (int(centru - 20), int(LatimeCadru * 2.0 / 3)), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
-
-        if self.Sectiune.centre.size > 1:
-            cv2.arrowedLine(img, (int(lungimeCadru / 2), 300), (int(self.mijlocCalculat), 300), (255, 255, 125), 2)
-            cv2.putText(img, "Dist: " + str(DiferentaFataDeMijloc), (int(lungimeCadru / 2 + 50), 300),
-                        cv2.FONT_HERSHEY_SIMPLEX, 0.5, (60, 0, 60), 1)
-            cv2.line(img, (int(self.mijlocCalculat), 0), (int(self.mijlocCalculat), LatimeCadru), (255, 125, 125), 5)
-
     def setDistantaDrum(self,valoare):
         self.MedDistanta=valoare
 
@@ -155,9 +136,9 @@ while (cap.isOpened()):
     if ret is False:
         break
     img = frame
-    #if stopOrPark(img, False) == 1:
-    #    print("STOP")
-    #    serialHandler.sendBrake(0)
+
+    #EsteStop,EsteParcare = stopOrPark(frame, AMPARCAT)
+    EsteStop,EsteParcare=False,False
     if VIDEO_RECORD:
         out.write(frame)
     counter = counter + 1
@@ -165,6 +146,30 @@ while (cap.isOpened()):
     if not ESTE_PE_MASINA:
         cv2.putText(img, "Cadrul: " + str(counter), (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.4,
                     (250, 250, 250), 2)
+    # if (counter==10): #TODO de sters urmatoarele 6 linii
+    #     serialHandler.sendBrake(0.0)
+    #     masina.Parcheaza()
+    #     time.sleep(10)
+    # if (counter>10):
+    #     continue
+    if EsteStop :
+        print("avem stop")
+        print(str(masina.current_state))
+        if (masina.current_state == masina.initializare) :  # verific ca sunt in starea initiala
+            counterStop = counterStop + 1
+            masina.stoptodo()
+            CounterFolositPentruAMasuraStarea = 1
+        else :
+            print("dar nu sunt in starea de mers")
+    if EsteParcare:
+        print("avem parcare")
+        if (masina.current_state == masina.initializare) :  # verific ca sunt in starea initial
+                AMPARCAT = True
+                masina.Parcheaza()
+                CounterFolositPentruAMasuraStarea = 1
+        else :
+            print("dar nu sunt in starea de mers")
+
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
     ret, binarization = cv2.threshold(gray, 190, 255, cv2.THRESH_BINARY)
     LatimeCadru, lungimeCadru, _ = frame.shape
@@ -176,7 +181,6 @@ while (cap.isOpened()):
     #BenziPrincipale = ObtineStructuri(int(LatimeCadru * 2.0 / 3), binarization)
     #DrumPrincipal=Drum(BenziPrincipale)
     Sectiune.ObtineStructuri(lungimeCadru, binarization)
-    print(str(Sectiune.centre.size))
     Sectiune.SetNumeBanda("Sect. Pp")
     Sectiune.CalculDistantaBanda(lungimeCadru)
     fps = cap.get(cv2.CAP_PROP_FPS)
