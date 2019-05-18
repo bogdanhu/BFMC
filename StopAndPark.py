@@ -52,7 +52,7 @@ def stopOrPark(frame,AmParcat): #return AmSTOP,AmParcat
         upper_blue = np.array([110, 255, 255])
         maskBlue = cv2.inRange(hsv, lower_blue, upper_blue)
 
-        kernelBlue = np.ones((1, 1), np.uint8)
+        kernelBlue = np.ones((1, 1), np.uint8)#
         counterBlue = 0
         contoursBlue, none = cv2.findContours(maskBlue, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
         for cnt in contoursBlue:
